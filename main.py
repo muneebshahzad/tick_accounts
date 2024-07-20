@@ -6,28 +6,20 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from flask import Flask, render_template, jsonify, request, flash, redirect, url_for
-import datetime,requests
+import datetime, requests
 from datetime import datetime
-import pymssql,shopify
-import asyncio
+import pymssql, shopify
 import aiohttp
 
 app = Flask(__name__)
 app.debug = True
+app.secret_key = os.getenv('APP_SECRET_KEY', 'default_secret_key')  # Use environment variable
 
-app_secret_key = os.getenv('APP_SECRET_KEY')
-smtp_user = os.getenv('SMTP_USER')
-smtp_password = os.getenv('SMTP_PASSWORD')
-leopard_api_key = os.getenv('LEOPARD_API_KEY')
-leopard_password = os.getenv('LEOPARD_PASSWORD')
-shop_url = os.getenv('SHOP_URL')
-api_key = os.getenv('API_KEY')
-password = os.getenv('PASSWORD')
 def get_db_connection():
-    server = 'tickbags.database.windows.net'
-    database = 'TickBags'
-    username = 'tickbags_ltd'
-    password = 'TB@2024!'
+    server = os.getenv('DB_SERVER')
+    database = os.getenv('DB_DATABASE')
+    username = os.getenv('DB_USERNAME')
+    password = os.getenv('DB_PASSWORD')
     try:
         connection = pymssql.connect(server=server, user=username, password=password, database=database)
         return connection
@@ -71,8 +63,6 @@ def submit_tasks():
     flash("Tasks submitted successfully!", "success")
     return redirect(url_for("index"))
 
-
-
 @app.route('/send-email', methods=['POST'])
 def send_email():
     data = request.get_json()
@@ -85,7 +75,8 @@ def send_email():
         # SMTP server configuration
         smtp_server = 'smtp.gmail.com'
         smtp_port = 587
-
+        smtp_user = os.getenv('SMTP_USER')  # Use environment variable
+        smtp_password = os.getenv('SMTP_PASSWORD')  # Use environment variable
 
         # Create the message
         msg = MIMEText(body)
@@ -107,8 +98,9 @@ def send_email():
         return jsonify({'error': str(e)}), 500
 
 async def fetch_tracking_data(session, tracking_number):
-
-    url = f"https://merchantapi.leopardscourier.com/api/trackBookedPacket/?api_key={leopardAPI_Key}&api_password={leopard_password}&track_numbers={tracking_number}"
+    api_key = os.getenv('LEOPARD_API_KEY')  # Use environment variable
+    api_password = os.getenv('LEOPARD_PASSWORD')  # Use environment variable
+    url = f"https://merchantapi.leopardscourier.com/api/trackBookedPacket/?api_key={api_key}&api_password={api_password}&track_numbers={tracking_number}"
     async with session.get(url) as response:
         return await response.json()
 
@@ -160,7 +152,6 @@ async def process_line_item(session, line_item, fulfillments):
 
     return tracking_info if tracking_info else [
         {"tracking_number": "N/A", "status": "Un-Booked", "quantity": line_item.quantity}]
-
 
 async def process_order(session, order):
     order_start_time = time.time()
@@ -224,9 +215,10 @@ async def process_order(session, order):
 
     return order_info
 
-
 async def getShopifyOrders():
-
+    shop_url = os.getenv('SHOP_URL')  # Use environment variable
+    api_key = os.getenv('API_KEY')  # Use environment variable
+    password = os.getenv('PASSWORD')  # Use environment variable
 
     shopify.ShopifyResource.set_site(shop_url)
     shopify.ShopifyResource.set_user(api_key)
@@ -244,7 +236,6 @@ async def getShopifyOrders():
     print(f"Total time taken to process all orders: {total_end_time - total_start_time:.2f} seconds")
 
     return order_details
-
 
 @app.route("/track")
 def tracking():
@@ -310,7 +301,7 @@ def resume_timer():
 
 @app.route('/get_elapsed_time', methods=['GET'])
 def get_elapsed_time():
-    today = datetime.datetime.now().date()
+    today = datetime.now().date()
 
     conn = get_db_connection()
     cursor = conn.cursor(as_dict=True)
