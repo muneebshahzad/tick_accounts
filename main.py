@@ -14,6 +14,7 @@ import lazop
 app = Flask(__name__)
 app.debug = True
 app.secret_key = os.getenv('APP_SECRET_KEY', 'default_secret_key')  # Use environment variable
+
 order_details = []
 def get_db_connection():
     server = os.getenv('DB_SERVER')
@@ -221,7 +222,6 @@ async def process_order(session, order):
     order_end_time = time.time()
     print(f"Time taken to process order {order.order_number}: {order_end_time - order_start_time:.2f} seconds")
 
-
     return order_info
 
 
@@ -255,9 +255,9 @@ def apply_tag():
 
 async def getShopifyOrders():
 
-    global  order_details
+    global order_details
     orders = shopify.Order.find(limit=250, order='created_at DESC')
-
+    order_details = []
     total_start_time = time.time()
 
     async with aiohttp.ClientSession() as session:
@@ -301,8 +301,8 @@ def index():
 
 @app.route('/start_timer', methods=['POST'])
 def start_timer():
-    today = datetime.now().date()
-    start_time = datetime.now().time()
+    today = datetime.datetime.now().date()
+    start_time = datetime.datetime.now().time()
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -452,27 +452,23 @@ def format_date(date_str):
     # Format the date object to only show the date
     return date_obj.strftime("%Y-%m-%d")
 
-@app.route('/refresh', methods=['POST'])
-def refresh():
-    global order_details
-    order_details = asyncio.run(getShopifyOrders())
-    return jsonify({'message': 'Data refreshed successfully'}), 200
+
+shop_url = os.getenv('SHOP_URL')
+api_key = os.getenv('API_KEY')
+password = os.getenv('PASSWORD')
+shopify.ShopifyResource.set_site(shop_url)
+shopify.ShopifyResource.set_user(api_key)
+shopify.ShopifyResource.set_password(password)
 
 
-@app.route('/start')
-def start():
-    global order_details
-    order_details = asyncio.run(getShopifyOrders())
-    render_template("track.html", order_details=order_details)
+order_details = asyncio.run(getShopifyOrders())
 
 if __name__ == "__main__":
     shop_url = os.getenv('SHOP_URL')
     api_key = os.getenv('API_KEY')
     password = os.getenv('PASSWORD')
-
     shopify.ShopifyResource.set_site(shop_url)
     shopify.ShopifyResource.set_user(api_key)
     shopify.ShopifyResource.set_password(password)
-    order_details = asyncio.run(getShopifyOrders())
 
     app.run(port=5001)
