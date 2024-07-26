@@ -269,6 +269,11 @@ async def getShopifyOrders():
 
     return order_details
 
+@app.route("/track")
+def tracking():
+    global order_details
+    return render_template("track.html", order_details=order_details)
+
 @app.route("/")
 def index():
     today = datetime.now().date()
@@ -462,9 +467,6 @@ if __name__ == "__main__":
     shopify.ShopifyResource.set_user(api_key)
     shopify.ShopifyResource.set_password(password)
     order_details = asyncio.run(getShopifyOrders())
-    @app.route("/track")
-    def tracking():
-        return render_template("track.html", order_details=order_details)
 
 
     app.run(port=5001)
