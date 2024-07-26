@@ -458,6 +458,12 @@ def refresh():
     order_details = asyncio.run(getShopifyOrders())
     return jsonify({'message': 'Data refreshed successfully'}), 200
 
+
+@app.route('/start')
+def start():
+    global order_details
+    order_details = asyncio.run(getShopifyOrders())
+
 if __name__ == "__main__":
     shop_url = os.getenv('SHOP_URL')
     api_key = os.getenv('API_KEY')
