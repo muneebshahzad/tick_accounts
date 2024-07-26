@@ -4,12 +4,12 @@ import smtplib
 import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
 from flask import Flask, render_template, jsonify, request, flash, redirect, url_for
 import datetime, requests
 from datetime import datetime
 import pymssql, shopify
 import aiohttp
+import lazop
 
 app = Flask(__name__)
 app.debug = True
@@ -164,6 +164,8 @@ async def process_order(session, order):
         status = (order.fulfillment_status).title()
     except:
         status = "Un-fulfilled"
+    print(order)
+    tags = []
 
     order_info = {
         'order_id': order.order_number,
@@ -173,14 +175,18 @@ async def process_order(session, order):
         'line_items': [],
         'financial_status': (order.financial_status).title(),
         'fulfillment_status': status,
-        'customer_details' : {"name" : order.billing_address.name , "address" : order.billing_address.address1 , "city" : order.billing_address.city , "phone":  order.billing_address.phone}
+        'customer_details' : {"name" : order.billing_address.name , "address" : order.billing_address.address1 , "city" : order.billing_address.city , "phone":  order.billing_address.phone},
+        'tags': order.tags.split(", "),
+        'id': order.id
     }
+    print(order.tags)
 
     tasks = []
     for line_item in order.line_items:
         tasks.append(process_line_item(session, line_item, order.fulfillments))
 
     results = await asyncio.gather(*tasks)
+    variant_name = ""
     for tracking_info_list, line_item in zip(results, order.line_items):
         if tracking_info_list is None:
             continue  # Skip this line item
@@ -192,10 +198,12 @@ async def process_order(session, order):
                     if variant.id == line_item.variant_id:
                         if variant.image_id is not None:
                             images = shopify.Image.find(image_id=variant.image_id, product_id=line_item.product_id)
+                            variant_name = line_item.variant_title
                             for image in images:
                                 if image.id == variant.image_id:
                                     image_src = image.src
                         else:
+                            variant_name = ""
                             image_src = product.image.src
         else:
             image_src = "https://static.thenounproject.com/png/1578832-200.png"
@@ -204,7 +212,7 @@ async def process_order(session, order):
             order_info['line_items'].append({
                 'fulfillment_status': line_item.fulfillment_status,
                 'image_src': image_src,
-                'product_title': line_item.title,
+                'product_title': line_item.title + " - " + variant_name ,
                 'quantity': info['quantity'],
                 'tracking_number': info['tracking_number'],
                 'status': info['status']
@@ -213,16 +221,40 @@ async def process_order(session, order):
     order_end_time = time.time()
     print(f"Time taken to process order {order.order_number}: {order_end_time - order_start_time:.2f} seconds")
 
+
     return order_info
 
-async def getShopifyOrders():
-    shop_url = os.getenv('SHOP_URL')  # Use environment variable
-    api_key = os.getenv('API_KEY')  # Use environment variable
-    password = os.getenv('PASSWORD')  # Use environment variable
 
-    shopify.ShopifyResource.set_site(shop_url)
-    shopify.ShopifyResource.set_user(api_key)
-    shopify.ShopifyResource.set_password(password)
+
+
+@app.route('/apply_tag', methods=['POST'])
+def apply_tag():
+    data = request.json
+    order_id = data.get('order_id')
+    tag = data.get('tag')
+
+    # Get today's date in YYYY-MM-DD format
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    tag_with_date = f"{tag} ({today_date})"
+
+    try:
+        order = shopify.Order.find(order_id)
+        if order.tags:
+            tags = order.tags.split(", ")
+            # tags = tags.remove("Leopards Courier")
+        else:
+            tags = []
+        if tag_with_date not in tags:
+            tags.append(tag_with_date)
+        order.tags = ", ".join(tags)
+        order.save()
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"success": False, "error": str(e)})
+
+async def getShopifyOrders():
+
 
     orders = shopify.Order.find(limit=250, order='created_at DESC')
     order_details = []
@@ -239,8 +271,7 @@ async def getShopifyOrders():
 
 @app.route("/track")
 def tracking():
-    order_details = asyncio.run(getShopifyOrders())
-    return render_template("tables.html", order_details=order_details)
+    return render_template("track.html", order_details=order_details)
 
 @app.route("/")
 def index():
@@ -269,8 +300,8 @@ def index():
 
 @app.route('/start_timer', methods=['POST'])
 def start_timer():
-    today = datetime.datetime.now().date()
-    start_time = datetime.datetime.now().time()
+    today = datetime.now().date()
+    start_time = datetime.now().time()
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -324,5 +355,117 @@ def get_elapsed_time():
     conn.close()
     return jsonify({"elapsed_seconds": elapsed_seconds})
 
+
+
+def get_daraz_orders(statuses):
+    try:
+        access_token = '50000601237osiZ0F1HkTZVojWcjq6szVDmDPjxiuvoEbCSvB15ff2bc8xtn4m'
+        client = lazop.LazopClient('https://api.daraz.pk/rest', '501554', 'nrP3XFN7ChZL53cXyVED1yj4iGZZtlcD')
+
+        all_orders = []
+
+        for status in statuses:
+            request = lazop.LazopRequest('/orders/get', 'GET')
+            request.add_api_param('sort_direction', 'DESC')
+            request.add_api_param('update_before', '2025-02-10T16:00:00+08:00')
+            request.add_api_param('offset', '2')
+            request.add_api_param('created_before', '2025-02-10T16:00:00+08:00')
+            request.add_api_param('created_after', '2017-02-10T09:00:00+08:00')
+            request.add_api_param('limit', '50')
+            request.add_api_param('update_after', '2017-02-10T09:00:00+08:00')
+            request.add_api_param('sort_by', 'updated_at')
+            request.add_api_param('status', status)
+            request.add_api_param('access_token', access_token)
+
+            response = client.execute(request)
+            orders = response.body.get('data', {}).get('orders', [])
+
+            for order in orders:
+                order_id = order['order_id']
+
+                item_request = lazop.LazopRequest('/order/items/get', 'GET')
+                item_request.add_api_param('order_id', order_id)
+                item_request.add_api_param('access_token', access_token)
+
+                item_response = client.execute(item_request)
+                items = item_response.body.get('data', [])
+
+                item_details = []
+                for item in items:
+                    tracking_num = item['tracking_code']
+
+                    tracking_req = lazop.LazopRequest('/logistic/order/trace', 'GET')
+                    tracking_req.add_api_param('order_id', order_id)
+                    tracking_req.add_api_param('access_token', access_token)
+                    tracking_response = client.execute(tracking_req)
+                    tracking_data = tracking_response.body.get('result', [])
+                    packages = tracking_data['data'][0]['package_detail_info_list']
+                    for package in packages:
+                        if package["tracking_number"] == tracking_num:
+                            track_status = package['logistic_detail_info_list'][-1]['title']
+                            print("MATCHED")
+                            break
+                        else:
+                            track_status = item['status']
+
+
+                    item_detail = {
+                        'item_image': item['product_main_image'],
+                        'item_title': item['name'],
+                        'quantity': item['variation'],
+                        'tracking_number': item['tracking_code'],
+                        'status': track_status
+                    }
+                    item_details.append(item_detail)
+
+                filtered_order = {
+                    'order_id': order['order_id'],
+                    'customer': {
+                        'name': f"{order['customer_first_name']} {order['customer_last_name']}",
+                        'address': order['address_shipping'],
+                        'phone': order['address_shipping']['phone']
+                    },
+                    'status': status.replace('_', ' ').title(),
+                    'date': format_date(order['created_at']),
+                    'total_price': order['price'],
+                    'items_list': item_details,
+
+                }
+                all_orders.append(filtered_order)
+
+        return all_orders
+    except Exception as e:
+        print("Error fetching orders:", e)
+        return []
+
+
+@app.route('/daraz')
+def daraz():
+    statuses = ['shipped','pending','ready_to_ship']
+    orders = get_daraz_orders(statuses)
+    return render_template('daraz.html', orders=orders)
+
+def format_date(date_str):
+    # Parse the date string
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S %z")
+    # Format the date object to only show the date
+    return date_obj.strftime("%Y-%m-%d")
+
+@app.route('/refresh', methods=['POST'])
+def refresh():
+    global order_details
+    order_details = asyncio.run(getShopifyOrders())
+    return jsonify({'message': 'Data refreshed successfully'}), 200
+
 if __name__ == "__main__":
+    shop_url = os.getenv('SHOP_URL')
+    api_key = os.getenv('API_KEY')
+    password = os.getenv('PASSWORD')
+
+    shopify.ShopifyResource.set_site(shop_url)
+    shopify.ShopifyResource.set_user(api_key)
+    shopify.ShopifyResource.set_password(password)
+    order_details = asyncio.run(getShopifyOrders())
+
+
     app.run(port=5001)
