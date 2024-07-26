@@ -14,7 +14,7 @@ import lazop
 app = Flask(__name__)
 app.debug = True
 app.secret_key = os.getenv('APP_SECRET_KEY', 'default_secret_key')  # Use environment variable
-
+order_details = []
 def get_db_connection():
     server = os.getenv('DB_SERVER')
     database = os.getenv('DB_DATABASE')
@@ -255,9 +255,9 @@ def apply_tag():
 
 async def getShopifyOrders():
 
-
+    global  order_details
     orders = shopify.Order.find(limit=250, order='created_at DESC')
-    order_details = []
+
     total_start_time = time.time()
 
     async with aiohttp.ClientSession() as session:
@@ -467,6 +467,5 @@ if __name__ == "__main__":
     shopify.ShopifyResource.set_user(api_key)
     shopify.ShopifyResource.set_password(password)
     order_details = asyncio.run(getShopifyOrders())
-
 
     app.run(port=5001)
