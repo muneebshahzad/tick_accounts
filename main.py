@@ -463,15 +463,16 @@ def refresh():
 def start():
     global order_details
     order_details = asyncio.run(getShopifyOrders())
+    render_template("track.html", order_details=order_details)
 
 if __name__ == "__main__":
     shop_url = os.getenv('SHOP_URL')
     api_key = os.getenv('API_KEY')
     password = os.getenv('PASSWORD')
-    print("hello")
+
     shopify.ShopifyResource.set_site(shop_url)
     shopify.ShopifyResource.set_user(api_key)
     shopify.ShopifyResource.set_password(password)
     order_details = asyncio.run(getShopifyOrders())
-    print("hi")
+
     app.run(port=5001)
