@@ -452,6 +452,16 @@ def format_date(date_str):
     # Format the date object to only show the date
     return date_obj.strftime("%Y-%m-%d")
 
+@app.route('/refresh', methods=['POST'])
+def refresh_data():
+    global order_details
+    try:
+        order_details = asyncio.run(getShopifyOrders())
+        return jsonify({'message': 'Data refreshed successfully'})
+    except Exception as e:
+        print(f"Error refreshing data: {e}")
+        return jsonify({'message': 'Failed to refresh data'}), 500
+
 
 shop_url = os.getenv('SHOP_URL')
 api_key = os.getenv('API_KEY')
