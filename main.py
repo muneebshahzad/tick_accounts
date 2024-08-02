@@ -4,12 +4,13 @@ import smtplib
 import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from flask import Flask, render_template, jsonify, request, flash, redirect, url_for
+from flask import Flask, render_template, jsonify, request, flash, redirect, url_for, abort
 import datetime, requests
 from datetime import datetime
 import pymssql, shopify
 import aiohttp
 import lazop
+import aiohttp
 
 app = Flask(__name__)
 app.debug = True
@@ -99,8 +100,9 @@ def send_email():
         return jsonify({'error': str(e)}), 500
 
 async def fetch_tracking_data(session, tracking_number):
-    api_key = os.getenv('LEOPARD_API_KEY')  # Use environment variable
-    api_password = os.getenv('LEOPARD_PASSWORD')  # Use environment variable
+
+    api_key = os.getenv('LEOPARD_API_KEY')
+    api_password = os.getenv('LEOPARD_PASSWORD')
     url = f"https://merchantapi.leopardscourier.com/api/trackBookedPacket/?api_key={api_key}&api_password={api_password}&track_numbers={tracking_number}"
     async with session.get(url) as response:
         return await response.json()
@@ -131,7 +133,11 @@ async def process_line_item(session, line_item, fulfillments):
                                         ["delivered", "returned to shipper"]):
                                     for detail in tracking_details:
                                         status = detail['Status']
-                                        if any(kw in status for kw in keywords):
+                                        if status == 'Pending':
+                                            reason = detail['Reason']
+                                        else:
+                                            reason = 'N/A'
+                                        if any(kw in status for kw in keywords) or any(kw in reason for kw in keywords):
                                             final_status = "Being Return"
                                             break
                             else:
@@ -190,7 +196,7 @@ async def process_order(session, order):
     variant_name = ""
     for tracking_info_list, line_item in zip(results, order.line_items):
         if tracking_info_list is None:
-            continue  # Skip this line item
+            continue
 
         if line_item.product_id is not None:
             product = shopify.Product.find(line_item.product_id)
@@ -218,12 +224,12 @@ async def process_order(session, order):
                 'tracking_number': info['tracking_number'],
                 'status': info['status']
             })
+            order_info['status'] = info['status']
 
     order_end_time = time.time()
     print(f"Time taken to process order {order.order_number}: {order_end_time - order_start_time:.2f} seconds")
 
     return order_info
-
 
 
 
@@ -301,8 +307,8 @@ def index():
 
 @app.route('/start_timer', methods=['POST'])
 def start_timer():
-    today = datetime.datetime.now().date()
-    start_time = datetime.datetime.now().time()
+    today = datetime.now().date()
+    start_time = datetime.now().time()
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -357,7 +363,6 @@ def get_elapsed_time():
     return jsonify({"elapsed_seconds": elapsed_seconds})
 
 
-
 def get_daraz_orders(statuses):
     try:
         access_token = '50000601237osiZ0F1HkTZVojWcjq6szVDmDPjxiuvoEbCSvB15ff2bc8xtn4m'
@@ -369,7 +374,7 @@ def get_daraz_orders(statuses):
             request = lazop.LazopRequest('/orders/get', 'GET')
             request.add_api_param('sort_direction', 'DESC')
             request.add_api_param('update_before', '2025-02-10T16:00:00+08:00')
-            request.add_api_param('offset', '2')
+            request.add_api_param('offset', '0')
             request.add_api_param('created_before', '2025-02-10T16:00:00+08:00')
             request.add_api_param('created_after', '2017-02-10T09:00:00+08:00')
             request.add_api_param('limit', '50')
@@ -379,72 +384,82 @@ def get_daraz_orders(statuses):
             request.add_api_param('access_token', access_token)
 
             response = client.execute(request)
-            orders = response.body.get('data', {}).get('orders', [])
+            darazOrders = response.body.get('data', {}).get('orders', [])
 
-            for order in orders:
-                order_id = order['order_id']
+            for order in darazOrders:
+                print(order)
+                order_id = order.get('order_id', 'Unknown')
 
                 item_request = lazop.LazopRequest('/order/items/get', 'GET')
                 item_request.add_api_param('order_id', order_id)
                 item_request.add_api_param('access_token', access_token)
 
                 item_response = client.execute(item_request)
-                items = item_response.body.get('data', [])
+                try:
+                    items = item_response.body.get('data', [])
+                    if not items:
+                        raise ValueError("No items found in the response.")
+                except (AttributeError, ValueError) as e:
+                    print(f"Error retrieving items: {e}")
+                    items = []
 
                 item_details = []
                 for item in items:
-                    tracking_num = item['tracking_code']
+                    tracking_num = item.get('tracking_code', 'Unknown')
 
                     tracking_req = lazop.LazopRequest('/logistic/order/trace', 'GET')
                     tracking_req.add_api_param('order_id', order_id)
                     tracking_req.add_api_param('access_token', access_token)
                     tracking_response = client.execute(tracking_req)
-                    tracking_data = tracking_response.body.get('result', [])
-                    packages = tracking_data['data'][0]['package_detail_info_list']
+
+                    tracking_data = tracking_response.body.get('result', {})
+                    packages = tracking_data.get('data', [{}])[0].get('package_detail_info_list', [])
+
+                    track_status = "N/A"
                     for package in packages:
-                        if package["tracking_number"] == tracking_num:
-                            track_status = package['logistic_detail_info_list'][-1]['title']
+                        if package.get("tracking_number") == tracking_num:
+                            try:
+                                track_status = package.get('logistic_detail_info_list', [{}])[-1].get('title', "N/A")
+                            except (IndexError, KeyError) as e:
+                                print(f"Error processing tracking data: {e}")
+                                track_status = "N/A"
                             print("MATCHED")
                             break
-                        else:
-                            track_status = item['status']
-
 
                     item_detail = {
-                        'item_image': item['product_main_image'],
-                        'item_title': item['name'],
-                        'quantity': item['variation'],
-                        'tracking_number': item['tracking_code'],
+                        'item_image': item.get('product_main_image', 'N/A'),
+                        'item_title': item.get('name', 'Unknown'),
+                        'quantity': item.get('variation', 'N/A'),
+                        'tracking_number': item.get('tracking_code', 'N/A'),
                         'status': track_status
                     }
                     item_details.append(item_detail)
 
                 filtered_order = {
-                    'order_id': order['order_id'],
+                    'order_id': order.get('order_id', 'Unknown'),
                     'customer': {
-                        'name': f"{order['customer_first_name']} {order['customer_last_name']}",
-                        'address': order['address_shipping'],
-                        'phone': order['address_shipping']['phone']
+                        'name': f"{order.get('customer_first_name', 'Unknown')} {order.get('customer_last_name', 'Unknown')}",
+                        'address': order.get('address_shipping', {}).get('address', 'N/A'),
+                        'phone': order.get('address_shipping', {}).get('phone', 'N/A')
                     },
                     'status': status.replace('_', ' ').title(),
-                    'date': format_date(order['created_at']),
-                    'total_price': order['price'],
+                    'date': format_date(order.get('created_at', 'N/A')),
+                    'total_price': order.get('price', '0.00'),
                     'items_list': item_details,
-
                 }
                 all_orders.append(filtered_order)
 
         return all_orders
     except Exception as e:
-        print("Error fetching orders:", e)
+        print(f"Error fetching darazOrders: {e}")
         return []
 
 
 @app.route('/daraz')
 def daraz():
     statuses = ['shipped','pending','ready_to_ship']
-    orders = get_daraz_orders(statuses)
-    return render_template('daraz.html', orders=orders)
+    darazOrders = get_daraz_orders(statuses)
+    return render_template('daraz.html', darazOrders=darazOrders)
 
 def format_date(date_str):
     # Parse the date string
@@ -462,6 +477,64 @@ def refresh_data():
         print(f"Error refreshing data: {e}")
         return jsonify({'message': 'Failed to refresh data'}), 500
 
+def check_database_connection():
+    server = 'tickbags.database.windows.net'
+    database = 'TickBags'
+    username = 'tickbags_ltd'
+    password = 'TB@2024!'
+
+    try:
+        print('Connecting to the database...')
+        connection = pymssql.connect(server=server, user=username, password=password, database=database)
+        print('Connected to the database')
+        return connection
+    except pymssql.Error as e:
+        print(f"Error connecting to the database: {str(e)}")
+        return None
+
+def fetch_transaction_data():
+    connection = check_database_connection()
+    if connection is None:
+        return []
+    print("CONNECTED TO DATABASE")
+
+    try:
+        with connection.cursor(as_dict=True) as cursor:
+            query = 'SELECT * FROM transactiondetails3 ORDER BY Payment_Date desc'
+            cursor.execute(query)
+            transactions = cursor.fetchall()
+            return transactions
+    except pymssql.Error as e:
+        print(f"Error fetching data from the database: {str(e)}")
+        return []
+    finally:
+        connection.close()
+
+@app.route('/finance_report')
+def finance_report():
+    transactions = fetch_transaction_data()
+
+    return render_template('finance_report.html', transactions=transactions)
+
+@app.route('/addTransaction')
+def addTransaction():
+
+    return render_template('addTransaction.html')
+
+def run_async(func, *args, **kwargs):
+    return asyncio.run(func(*args, **kwargs))
+@app.route('/track/<tracking_num>')
+def displayTracking(tracking_num):
+    print(f"Tracking Number: {tracking_num}")  # Debug line
+
+    async def async_func():
+        async with aiohttp.ClientSession() as session:
+            return await fetch_tracking_data(session, tracking_num)
+
+    data = run_async(async_func)
+
+    return render_template('trackingdata.html', data=data)
+
 
 shop_url = os.getenv('SHOP_URL')
 api_key = os.getenv('API_KEY')
@@ -469,8 +542,6 @@ password = os.getenv('PASSWORD')
 shopify.ShopifyResource.set_site(shop_url)
 shopify.ShopifyResource.set_user(api_key)
 shopify.ShopifyResource.set_password(password)
-
-
 order_details = asyncio.run(getShopifyOrders())
 
 if __name__ == "__main__":
@@ -482,3 +553,5 @@ if __name__ == "__main__":
     shopify.ShopifyResource.set_password(password)
 
     app.run(port=5001)
+
+
