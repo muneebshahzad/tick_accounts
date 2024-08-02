@@ -40,73 +40,7 @@
     <div id="wrapper">
 
         <!-- Sidebar -->
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-
-            <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/">
-                <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
-                </div>
-                <div class="sidebar-brand-text mx-3">Daily Tasker<sup>2</sup></div>
-            </a>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider my-0">
-
-            <!-- Nav Item - Dashboard -->
-            <li class="nav-item">
-                <a class="nav-link" href="/">
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span></a>
-            </li>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <!-- Heading -->
-
-            <!-- Nav Item - Pages Collapse Menu -->
-
-
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-fw fa-chart-area"></i>
-                    <span>Report</span></a>
-            </li>
-
-            <!-- Nav Item - Tables -->
-            <li class="nav-item active">
-                <a class="nav-link" href="track">
-                    <i class="fas fa-fw fa-table"></i>
-                    <span>Tracking</span></a>
-            </li>
-
-            <li class="nav-item ">
-                <a class="nav-link" href="daraz">
-                    <i class="fas fa-fw fa-table"></i>
-                    <span>Daraz Tracking</span></a>
-            </li>
-
-            <li class="nav-item">
-                <a class="nav-link" href="#" id="refreshButton">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>Refresh Data</span>
-                </a>
-            </li>
-
-
-
-
-            <!-- Divider -->
-            <hr class="sidebar-divider d-none d-md-block">
-
-            <!-- Sidebar Toggler (Sidebar) -->
-            <div class="text-center d-none d-md-inline">
-                <button class="rounded-circle border-0" id="sidebarToggle"></button>
-            </div>
-
-        </ul>
+        {% include 'header.html' %}
         <!-- End of Sidebar -->
 
         <!-- Content Wrapper -->
@@ -331,6 +265,7 @@
             <th>Date</th>
             <th>Total Price</th>
             <th>Items</th>
+            <th>Status</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -344,6 +279,7 @@
             <th>Date</th>
             <th>Total Price</th>
             <th>Items</th>
+            <th>Status</th>
             <th>Actions</th>
         </tr>
     </tfoot>
@@ -396,8 +332,9 @@
                                     <td><img src="{{ item.image_src }}" width="50" height="50"></td>
                                     <td>{{ item.product_title }}</td>
                                     <td>{{ item.quantity }}</td>
-                                    <td>{{ item.tracking_number }}</td>
+                                    <td><a href=track/{{item.tracking_number}} target=”_blank”> {{ item.tracking_number }} </a> </td>
                                     <td>{{ item.status }}</td>
+
                                     <td>
                                        <div class="btn-group">
     <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -410,11 +347,14 @@
     </div>
 </div>
                                     </td>
+
                                 </tr>
                             {% endfor %}
                         </tbody>
+
                     </table>
                 </td>
+                 <td> {{ order.status}}</td>
                  <td>
                         <button class="btn btn-primary btn-sm" onclick="toggleStatusButtons(this)">Mark As</button>
                         <div class="status-buttons">
@@ -496,105 +436,37 @@
 
     <!-- Page level custom scripts -->
     <script src="static/assets/js/demo/datatables-demo.js"></script>
+        <script src="static/assets/js/demo/datatables-demo.js"></script>
+    <script src="static/assets/js/track.js"></script>
+
 <script>
-    function sendEmail(type, trackingNumber) {
-        let subject = '';
-        let body = '';
 
-        switch(type) {
-            case 'delay':
-                subject = 'Delay in Delivery';
-                body = `Dear Team,\n\nPlease note that there has been significant delay in delivery of CN# ${trackingNumber}, Please arrange urgent delivery.\n\nThanks and Regards,\nTick Bags\nwww.tickbags.com`;
-                break;
-            case 'incomplete':
-                subject = 'FAKE DELIVERY REASON';
-                body = `Dear Team,\n\nPlease note that consignee is waiting for delivery against CN# ${trackingNumber}, while the tracking status says incomplete address even though the address is 100% accurate and phone number is completely accessible. Please arrange urgent delivery and make sure this shipment is not returned.\n\nThanks and Regards,\nTick Bags\nwww.tickbags.com`;
-                break;
-            case 'refusal':
-                subject = 'URGENT - FAKE ORDER REFUSAL';
-                body = `Dear Team,\n\nPlease note that consignee is waiting for delivery against CN# ${trackingNumber}, while the tracking status says that customer has refused the delivery. Please arrange urgent delivery and make sure this shipment is not returned.\n\nThanks and Regards,\nTick Bags\nwww.tickbags.com`;
-                break;
-        }
 
-        // Prepare data to send to backend
-        let data = {
-            to: ['Cod.lhe@leopardscourier.com','Cod.lhe1@leopardscourier.com','Cod.lhe5@leopardscourier.com','Codproject.lhe@leopardscourier.com'],
-            cc: ['ahmad.aslam@leopardscourier.com','muneeb.shahzad@hotmail.com'],
-            subject: subject,
-            body: body
-        };
-
-        // Make HTTP POST request to backend endpoint
-        fetch('/send-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        })
-        .then(response => {
-            if (response.ok) {
-                alert('Email sent successfully'); // Notify user
-                console.log('Email sent successfully'); // Log success to console
-            } else {
-                alert('Failed to send email'); // Notify user of failure
-                console.error('Failed to send email'); // Log failure to console
-            }
-        })
-        .catch(error => {
-            alert('Error sending email'); // Notify user of error
-            console.error('Error:', error); // Log error to console
-        });
+    $(document).ready(function() {
+        var table = $('#dataTable').DataTable();
+     if ($.fn.DataTable.isDataTable('#dataTable')) {
+        table.destroy();
     }
+
+        $('#dataTable').DataTable({
+            "columnDefs": [
+                { "searchable": false, "targets": -1,4 }  // Make the last column non-searchable
+            ]
+        });
+    });
 </script>
 
 <script>
-    function toggleStatusButtons(button) {
-        var statusButtons = button.nextElementSibling;
-        if (statusButtons.style.display === "none" || statusButtons.style.display === "") {
-            statusButtons.style.display = "block";
-        } else {
-            statusButtons.style.display = "none";
-        }
-    }
-
-    function applyTag(orderId, tag) {
-        fetch('/apply_tag', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ order_id: orderId, tag: tag })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Tag applied successfully');
-            } else {
-                alert('Failed to apply tag');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
-</script>
-
- <script>
-        document.getElementById('refreshButton').addEventListener('click', async function () {
-             alert('Refreshing in Background!')
-            const response = await fetch('/refresh', {
-                method: 'POST'
+        $(document).ready(function() {
+            var currentUrl = window.location.pathname;
+            $('.nav-item a').each(function() {
+                var linkUrl = $(this).attr('href');
+                if (currentUrl === '/' + linkUrl) {
+                    $(this).parent().addClass('active');
+                }
             });
-            const result = await response.json();
-            if (result.message === 'Data refreshed successfully') {
-                location.reload();
-            } else {
-                alert('Failed to refresh data');
-            }
         });
     </script>
-
 
 </body>
 

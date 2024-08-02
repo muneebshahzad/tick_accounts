@@ -9,7 +9,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Daily Tasker - Daraz Tracking</title>
+    <title>Daily Tasker - Finance Report</title>
 
     <!-- Custom fonts for this template -->
     <link href="static/assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
@@ -232,91 +232,48 @@
                 <div class="container-fluid">
 
                     <!-- Page Heading -->
-                    <h1 class="h3 mb-2 text-gray-800">Order Tracking</h1>
+                    <h1 class="h3 mb-2 text-gray-800">Finance Report</h1>
 
                     <!-- DataTales Example -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Daraz - Pending </h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Finance Report</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                                    <thead>
-                                        <tr>
-                                            <th>Order ID</th>
-                                            <th style="width: 15%;">Customer</th>
-                                            <th>Status</th>
-                                            <th>Date</th>
-                                            <th>Total Price</th>
-                                            <th>Items</th>
-                                        </tr>
-                                    </thead>
-                                    <tfoot>
-                                        <tr>
-                                            <th>Order ID</th>
-                                            <th style="width: 15%;">Customer</th>
-                                            <th>Status</th>
-                                            <th>Date</th>
-                                            <th>Total Price</th>
-                                            <th>Items</th>
-                                        </tr>
-                                    </tfoot>
-                                    <tbody>
-                                        {% for order in darazOrders %}
-                                            <tr>
-                                                <td>{{ order.order_id }} </td>
-                                                <td>
-                    {{ order.customer.name }}<br>
-                    {{ order.customer.address.address1}}  {{order.customer.address.address5}}<br>
-                    {{ order.customer.address.address4 }}<br>
-                    {{ order.customer.phone }}<br>
-                    <a href="tel:{{ order.customer.phone }}" class="btn btn-primary btn-sm">Call</a>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            WhatsApp
-                        </button>
-                         <div class="dropdown-menu">
-                            <a class="dropdown-item" href="https://wa.me/{{ order.customer.phone }}?text=Hello%20{{ order.customer.name }},%20Your%20order%23{{ order.order_id }}%20from%20TickBags.com%20has%20been%20dispatched%20and%20is%20expected%20to%20be%20delivered%20in%203-7%20working%20days.%20Your%20patience%20is%20highly%20appreciated." target="_blank">Send Dispatch Message</a>
-                            <a class="dropdown-item" href="https://wa.me/{{ order.customer.phone }}?text=Hello%20{{ order.customer.name }},%20Your%20order%23{{ order.order_id }}%20from%20TickBags.com%20has%20been%20delayed,%20please%20be%20assured%20that%20we%20are%20trying%20our%20best%20to%20deliver%20it%20at%20earliest.%20Your%20patience%20is%20highly%20appreciated." target="_blank">Send Delay Message</a>
-                            <a class="dropdown-item" href="https://wa.me/{{ order.customer.phone }}?text=Hello%20{{ order.customer.name }},%20Logistics%20company%20made%20an%20attempt%20to%20deliver%20your%20order%23{{ order.order_id }}%20from%20TickBags.com%20but%20as%20per%20them,%20you%20weren't%20available%20at%20address%20or%20the%20address%20was%20closed.%20Please%20let%20us%20know%20when%20should%20we%20re-arrange%20the%20delivery.%20Thank%20You" target="_blank">Send Address Closed Message</a>
-                            <a class="dropdown-item" href="https://wa.me/{{ order.customer.phone }}?text=Hello%20{{ order.customer.name }},%20Logistics%20company%20made%20an%20attempt%20to%20deliver%20your%20order%23{{ order.order_id }}%20from%20TickBags.com%20and%20according%20to%20them,%20you%20refused%20to%20accept%20the%20delivery.%20Please%20let%20us%20know%20if%20you're%20still%20interested%20in%20receiving%20the%20product." target="_blank">Send Refused Message</a>
-                            <a class="dropdown-item" href="https://wa.me/{{ order.customer.phone }}?text=Hello%20{{ order.customer.name }},%20Your%20order%23{{ order.order_id }}%20from%20TickBags.com%20was%20delivered%20recently.%20Please%20let%20us%20know%20about%20your%20experience%20with%20us.%20Your%20feedback%20will%20surely%20help%20us%20improve.%20Thank%20You!" target="_blank">Send Feedback Message</a>
-                        </div>
-                    </div>
-                </td>
-                                                <td>{{ order.status }}</td>
-                                                <td>{{ order.date }}</td>
-                                                <td>{{ order.total_price }}</td>
+    <thead>
+        <tr>
+            <th style="width: 30%;">Income/Expense Name </th>
+            <th>Transaction Type</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tfoot>
+        <tr>
+            <th style="width: 30%;">Income/Expense Name </th>
+            <th>Transaction Type</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+    </tfoot>
+    <tbody>
+        {% for transaction in transactions %}
+            <tr>
+                <td>{{ transaction.Income_Expense_Name }}</td>
+                <td>{{ transaction.Type }}</td>
+                <td>{{ transaction.Amount }}</td>
+                <td>{{ transaction.Payment_Date }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+                                <div class="totals">
+    <p>Total Income: <span id="totalIncome">0.00</span></p>
+    <p>Total Expense: <span id="totalExpense">0.00</span></p>
+</div>
 
-                                                <td>
-                                                    <table class="table table-sm">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Image</th>
-                                                                <th style="width: 50%;">Title</th>
-                                                                <th>Tracking Number</th>
-                                                                <th style="width: 20%;">Status</th>
-
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-
-                                                            {% for item in order.items_list %}
-                                                                <tr>
-                                                                    <td><img src="{{ item.item_image }}" width="50" height="50"></td>
-                                                                    <td>{{ item.item_title }} <br>{{item.quantity}}</td>
-                                                                    <td>{{ item.tracking_number }}</td>
-                                                                    <td>{{ item.status }}</td>
-                                                                </tr>
-                                                            {% endfor %}
-                                                        </tbody>
-                                                    </table>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
                             </div>
                         </div>
                     </div>
@@ -384,6 +341,53 @@
 
     <!-- Page level custom scripts -->
     <script src="static/assets/js/demo/datatables-demo.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+
+<script>
+$(document).ready(function() {
+    var table = $('#dataTable').DataTable();
+     if ($.fn.DataTable.isDataTable('#dataTable')) {
+        table.destroy();
+    }
+
+    // Re-initialize DataTable
+    $('#dataTable').DataTable({
+        "order": [[3, 'desc']]  // Sort by the 'Date' column on page load
+    });
+     var table = $('#dataTable').DataTable();
+    function updateTotals() {
+        // Get filtered data
+        var filteredData = table.rows({ filter: 'applied' }).data();
+
+        var totalIncome = 0;
+        var totalExpense = 0;
+
+        filteredData.each(function (rowData) {
+            var amount = parseFloat(rowData[2]);  // Assuming amount is in the 3rd column (index 2)
+            var type = rowData[1];  // Assuming transaction type is in the 2nd column (index 1)
+
+            if (type === 'Income') {
+                totalIncome += amount;
+            } else if (type === 'Expense') {
+                totalExpense += amount;
+            }
+        });
+
+        // Update totals display
+        $('#totalIncome').text(totalIncome.toFixed(2));
+        $('#totalExpense').text(totalExpense.toFixed(2));
+    }
+
+    // Update totals when table is drawn (e.g., after filtering, sorting)
+    table.on('draw', function() {
+        updateTotals();
+    });
+
+    // Initial update
+    updateTotals();
+});
+</script>
 
 </body>
 
