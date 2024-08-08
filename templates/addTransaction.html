@@ -101,68 +101,69 @@
                                     <a class="nav-link" id="expense-tab" data-toggle="tab" href="#expense" role="tab" aria-controls="expense" aria-selected="false">Add Expense</a>
                                 </li>
                             </ul>
-                            <div class="tab-content" id="myTabContent">
-                                <!-- Income Form -->
-                                <div class="tab-pane fade show active" id="income" role="tabpanel" aria-labelledby="income-tab">
-                                    <form class="mt-4">
-                                        <div class="form-group">
-                                            <label for="incomeAmount">Amount</label>
-                                            <input type="text" class="form-control" id="incomeAmount" placeholder="Enter amount">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="incomeType">Type</label>
-                                            <select class="form-control" id="incomeType">
-                                                <option>Salary</option>
-                                                <option>Business</option>
-                                                <option>Investment</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="incomeSource">Source</label>
-                                            <select class="form-control" id="incomeSource">
-                                                <option>Bank</option>
-                                                <option>Cash</option>
-                                                <option>Other</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="incomeDescription">Description</label>
-                                            <textarea class="form-control" id="incomeDescription" rows="3" placeholder="Enter description"></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">Submit</button>
-                                    </form>
-                                </div>
-                                <!-- Expense Form -->
-                                <div class="tab-pane fade" id="expense" role="tabpanel" aria-labelledby="expense-tab">
-                                    <form class="mt-4">
-                                        <div class="form-group">
-                                            <label for="expenseAmount">Amount</label>
-                                            <input type="text" class="form-control" id="expenseAmount" placeholder="Enter amount">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="expenseType">Type</label>
-                                            <select class="form-control" id="expenseType">
-                                                <option>Rent</option>
-                                                <option>Utilities</option>
-                                                <option>Groceries</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="expensePaymentTo">Payment To</label>
-                                            <select class="form-control" id="expensePaymentTo">
-                                                <option>Bank</option>
-                                                <option>Cash</option>
-                                                <option>Other</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="expenseDescription">Description</label>
-                                            <textarea class="form-control" id="expenseDescription" rows="3" placeholder="Enter description"></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">Submit</button>
-                                    </form>
-                                </div>
-                            </div>
+                               <div class="tab-content" id="myTabContent">
+            <!-- Income Form -->
+            <div class="tab-pane fade show active" id="income" role="tabpanel" aria-labelledby="income-tab">
+                <form class="mt-4">
+                    <div class="form-group">
+                        <label for="incomeAmount">Amount</label>
+                        <input type="text" class="form-control" id="incomeAmount" placeholder="Enter amount" oninput="validateAmount(this)">
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeType">Type</label>
+                        <select class="form-control" id="incomeType">
+                            <option>Salary</option>
+                            <option>Business</option>
+                            <option>Investment</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeSource">Source</label>
+                        <select class="form-control" id="incomeSource">
+                            <option>Bank</option>
+                            <option>Cash</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeDescription">Description</label>
+                        <textarea class="form-control" id="incomeDescription" rows="3" placeholder="Enter description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+            <!-- Expense Form -->
+            <div class="tab-pane fade" id="expense" role="tabpanel" aria-labelledby="expense-tab">
+                <form class="mt-4">
+                    <div class="form-group">
+                        <label for="expenseAmount">Amount</label>
+                        <input type="text" class="form-control" id="expenseAmount" placeholder="Enter amount" oninput="validateAmount(this)">
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseType">Type</label>
+                        <select class="form-control" id="expenseType">
+                            <option>Rent</option>
+                            <option>Utilities</option>
+                            <option>Groceries</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expensePaymentTo">Payment To</label>
+                        <select class="form-control" id="expensePaymentTo">
+                            <option>Bank</option>
+                            <option>Cash</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDescription">Description</label>
+                        <textarea class="form-control" id="expenseDescription" rows="3" placeholder="Enter description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+
                         </div>
                     </div>
                     <!-- End Card -->
@@ -227,6 +228,14 @@
 
     <!-- Page level custom scripts -->
     <script src="static/assets/js/demo/datatables-demo.js"></script>
+    <script>
+        function validateAmount(input) {
+            const value = input.value;
+            if (!/^\d*\.?\d*$/.test(value)) {
+                input.value = value.slice(0, -1);
+            }
+        }
+    </script>
 
 </body>
 
