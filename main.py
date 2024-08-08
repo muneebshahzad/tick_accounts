@@ -173,7 +173,36 @@ async def process_order(session, order):
         status = "Un-fulfilled"
     print(order)
     tags = []
+    try:
+        name = order.billing_address.name
+    except AttributeError:
+        name = " "
+        print("Error retrieving name")
 
+    try:
+        address = order.billing_address.address1
+    except AttributeError:
+        address = " "
+        print("Error retrieving address")
+
+    try:
+        city = order.billing_address.city
+    except AttributeError:
+        city = " "
+        print("Error retrieving city")
+
+    try:
+        phone = order.billing_address.phone
+    except AttributeError:
+        phone = " "
+        print("Error retrieving phone")
+
+    customer_details = {
+        "name": name,
+        "address": address,
+        "city": city,
+        "phone": phone
+    }
     order_info = {
         'order_id': order.order_number,
         'tracking_id': 'N/A',
@@ -182,7 +211,7 @@ async def process_order(session, order):
         'line_items': [],
         'financial_status': (order.financial_status).title(),
         'fulfillment_status': status,
-        'customer_details' : {"name" : order.billing_address.name , "address" : order.billing_address.address1 , "city" : order.billing_address.city , "phone":  order.billing_address.phone},
+        'customer_details' : customer_details,
         'tags': order.tags.split(", "),
         'id': order.id
     }
