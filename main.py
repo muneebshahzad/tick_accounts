@@ -291,7 +291,7 @@ def apply_tag():
 async def getShopifyOrders():
 
     global order_details
-    orders = shopify.Order.find(limit=0, order='created_at DESC')
+    orders = shopify.Order.find(limit=250, order='created_at DESC')
     order_details = []
     total_start_time = time.time()
 
@@ -307,6 +307,14 @@ async def getShopifyOrders():
 @app.route("/track")
 def tracking():
     global order_details
+    shop_url = os.getenv('SHOP_URL')
+    api_key = os.getenv('API_KEY')
+    password = os.getenv('PASSWORD')
+    shopify.ShopifyResource.set_site(shop_url)
+    shopify.ShopifyResource.set_user(api_key)
+    shopify.ShopifyResource.set_password(password)
+    order_details = asyncio.run(getShopifyOrders())
+    
     return render_template("track.html", order_details=order_details)
 
 @app.route("/track")
@@ -978,13 +986,7 @@ def add_expense():
 
 
 
-shop_url = os.getenv('SHOP_URL')
-api_key = os.getenv('API_KEY')
-password = os.getenv('PASSWORD')
-shopify.ShopifyResource.set_site(shop_url)
-shopify.ShopifyResource.set_user(api_key)
-shopify.ShopifyResource.set_password(password)
-order_details = asyncio.run(getShopifyOrders())
+
 
 if __name__ == "__main__":
     shop_url = os.getenv('SHOP_URL')
