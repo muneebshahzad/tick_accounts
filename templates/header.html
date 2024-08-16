@@ -1,3 +1,46 @@
+
+<style>
+        /* Hide the content initially */
+        body {
+            display: none; /* Hide body initially */
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const correctPassword = 'security'; // Correct password
+            const accessDuration = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+            function checkPassword() {
+                const lastAccess = localStorage.getItem('lastAccess');
+                const currentTime = new Date().getTime();
+
+                if (lastAccess && (currentTime - lastAccess < accessDuration)) {
+                    // If within 10 minutes, show the content
+                    document.body.style.display = 'block';
+                    return;
+                }
+
+                // Prompt for password if not within 10 minutes
+                while (true) {
+                    let userPassword = prompt('Enter the password to access this page:');
+
+                    if (userPassword === correctPassword) {
+                        // Store the current time in localStorage
+                        localStorage.setItem('lastAccess', currentTime);
+                        // Show the content if the password is correct
+                        document.body.style.display = 'block';
+                        break; // Exit the loop
+                    } else {
+                        alert('Wrong password. Please try again.');
+                    }
+                }
+            }
+
+            // Call the function to check password when the page loads
+            checkPassword();
+        });
+    </script>
+
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
@@ -62,12 +105,10 @@
                 <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar" style="">
                     <div class="bg-white py-2 collapse-inner rounded">
                         <h6 class="collapse-header">Accounts:</h6>
-                        <a class="collapse-item" href="summary">Summary</a>
+                        <a class="collapse-item" href="https://dashboard.tickbags.com/">Summary</a>
                         <a class="collapse-item" href="addTransaction">Add Transaction</a>
                         <a class="collapse-item" href="finance_report">Transactions List</a>
-                        <div class="collapse-divider"></div>
-                        <h6 class="collapse-header">Personal Accounts</h6>
-                        <a class="collapse-item" href="404.html">Account Balances</a>
+
                     </div>
                 </div>
             </li>

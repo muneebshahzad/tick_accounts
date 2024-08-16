@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Daily Tasker - Account Balances</title>
+
+    <!-- Custom fonts for this template -->
+    <link href="static/assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="static/assets/css/sb-admin-2.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this page -->
+    <link href="static/assets/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body id="page-top">
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        {% include 'header.html' %}
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                    <!-- Sidebar Toggle (Topbar) -->
+                    <form class="form-inline">
+                        <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                    </form>
+
+                    <!-- Topbar Search -->
+
+
+                    <!-- Topbar Navbar -->
+                    <ul class="navbar-nav ml-auto">
+
+                        <!-- Nav Item - Search Dropdown (Visible Only XS) -->
+                        <li class="nav-item dropdown no-arrow d-sm-none">
+                            <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-search fa-fw"></i>
+                            </a>
+                            <!-- Dropdown - Messages -->
+                            <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in" aria-labelledby="searchDropdown">
+                                <form class="form-inline mr-auto w-100 navbar-search">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="basic-addon2">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="button">
+                                                <i class="fas fa-search fa-sm"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </li>
+
+                         <div class="topbar-divider d-none d-sm-block"></div>
+
+                        <!-- Nav Item - User Information -->
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">User</span>
+                                <img class="img-profile rounded-circle" src="static/img/undraw_profile.svg">
+                            </a>
+                            <!-- Dropdown - User Information -->
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Profile
+                                </a>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Settings
+                                </a>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-list fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Activity Log
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Logout
+                                </a>
+                            </div>
+                        </li>
+
+                    </ul>
+
+                </nav>
+                <!-- End of Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">
+
+                   <div class="row">
+    <!-- Cash on Hand -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Cash on Hand</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rs {{ account_summary.cash_on_hand }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Earnings (Monthly) -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Earnings (Monthly)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rs {{ account_summary.earnings_monthly }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses (Monthly) -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Expenses (Monthly)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rs {{ account_summary.expenses_monthly }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Net Profit -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Net Profit (Excluding Withdrawal)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rs {{ account_summary.net_profit }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-comments fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+                    <div class="container-fluid">
+        <div class="row">
+            <!-- Area Chart -->
+            <div class="col-xl-4 col-lg-7">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Earnings Overview</h6>
+        </div>
+        <div class="card-body">
+            <div class="chart-area">
+                <canvas id="monthlyNetProfitChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+            <div class="col-xl-4 col-lg-5">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Revenue Sources</h6>
+        </div>
+        <div class="card-body">
+            <div class="chart-pie pt-4 pb-2">
+                <canvas id="incomePieChart"></canvas>
+            </div>
+            <div class="mt-4 text-center small">
+                {% for label, color in labeled_colors %}
+                    <span class="mr-2">
+                        <i class="fas fa-circle" style="color: {{ color }}"></i> {{ label }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+             <div class="col-xl-4 col-lg-5">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Expenses</h6>
+        </div>
+        <div class="card-body">
+            <div class="chart-pie pt-4 pb-2">
+                <canvas id="expensePieChart"></canvas>
+            </div>
+            <div class="mt-4 text-center small">
+                {% for label, color in labeled_expenses_colors %}
+                    <span class="mr-2">
+                        <i class="fas fa-circle" style="color: {{ color }}"></i> {{ label }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+            <!-- Other Charts -->
+            <!-- Pie charts or other content -->
+        </div>
+    </div>
+
+                <div class="container mt-5">
+    <div class="row">
+
+        {% for account in accounts %}
+        <!-- Repeat the card block for each employee -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-8">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{{ account.person_name }}</h5>
+                    <h6 class="card-subtitle mb-2 text-primary">Balance</h6>
+                    <p class="display-6 text-success">Rs {{ account.balance }}</p>
+                    <a href="{{ url_for('accountData', account_name=account.person_name) }}"  class="btn btn-primary btn-sm mt-3">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- More employee cards... -->
+    </div>
+</div>
+                    <!-- DataTales Example -->
+
+
+                </div>
+                <!-- /.container-fluid --><br><br>
+<div class="container-fluid">
+
+    <!-- Page Heading -->
+    <h1 class="h3 mb-2 text-gray-800">Add Income or Expense</h1>
+
+    <!-- Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Income and Expense Forms</h6>
+        </div>
+        <div class="card-body">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="income-tab" data-toggle="tab" href="#income" role="tab" aria-controls="income" aria-selected="true">Add Income</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="expense-tab" data-toggle="tab" href="#expense" role="tab" aria-controls="expense" aria-selected="false">Add Expense</a>
+                </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+                <!-- Income Form -->
+                <div class="tab-pane fade show active" id="income" role="tabpanel" aria-labelledby="income-tab">
+                    <form class="mt-4" id="incomeForm" method="POST" action="/add_income">
+                        <div class="form-group">
+                            <label for="incomeAmount">Amount</label>
+                            <input type="text" class="form-control" id="incomeAmount" name="amount" placeholder="Enter amount" oninput="validateAmount(this)" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="incomeType">Type</label>
+                            <select class="form-control" id="incomeType" name="income_type" onchange="populateIncomeSubtypes()" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="incomeSubtype">Payment to</label>
+                            <select class="form-control" id="incomeSubtype" name="income_subtype" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="incomeDescription">Description</label>
+                            <textarea class="form-control" id="incomeDescription" name="description" rows="3" placeholder="Enter description"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+                <!-- Expense Form -->
+                <div class="tab-pane fade" id="expense" role="tabpanel" aria-labelledby="expense-tab">
+                    <form class="mt-4" id="expenseForm" method="POST" action="/add_expense">
+                        <div class="form-group">
+                            <label for="expenseAmount">Amount</label>
+                            <input type="text" class="form-control" id="expenseAmount" name="amount" placeholder="Enter amount" oninput="validateAmount(this)" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseType">Type</label>
+                            <select class="form-control" id="expenseType" name="expense_type" onchange="populateExpenseSubtypes()" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseSubtype">Payment to</label>
+                            <select class="form-control" id="expenseSubtype" name="expense_subtype" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseDescription">Description</label>
+                            <textarea class="form-control" id="expenseDescription" name="description" rows="3" placeholder="Enter description"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="sticky-footer bg-white">
+        <div class="container my-auto">
+            <div class="copyright text-center my-auto">
+                <span>Copyright &copy; Daily Tasker @ 2024</span>
+            </div>
+        </div>
+    </footer>
+    <!-- End of Footer -->
+
+</div>
+
+    <!-- End of Page Wrapper -->
+
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+
+    <!-- Logout Modal-->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                    <a class="btn btn-primary" href="login.html">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap core JavaScript-->
+    <script src="static/assets/vendor/jquery/jquery.min.js"></script>
+    <script src="static/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core plugin JavaScript-->
+    <script src="static/assets/vendor/jquery-easing/jquery.easing.min.js"></script>
+
+    <!-- Custom scripts for all pages-->
+    <script src="static/assets/js/sb-admin-2.min.js"></script>
+
+    <!-- Page level plugins -->
+    <script src="static/assets/vendor/datatables/jquery.dataTables.min.js"></script>
+    <script src="static/assets/vendor/datatables/dataTables.bootstrap4.min.js"></script>
+
+    <!-- Page level custom scripts -->
+    <script src="static/assets/js/demo/datatables-demo.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('monthlyNetProfitChart').getContext('2d');
+    const monthlyNetProfitChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ financial_data['months'] | safe }},
+            datasets: [{
+                label: 'Net Profit',
+                data: {{ financial_data['net_amounts'] | safe }},
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const incomeCtx = document.getElementById('incomePieChart').getContext('2d');
+    const incomePieChart = new Chart(incomeCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ income_data['income'] | safe }},
+            datasets: [{
+                data: {{ income_data['net_amounts'] | safe }},
+                backgroundColor: {{ colors | safe }},
+                hoverBackgroundColor: {{ colors | safe }},
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: false,
+                caretPadding: 10,
+            },
+            legend: {
+                display: false
+            },
+            cutoutPercentage: 0,
+        },
+    });
+</script>
+
+
+<script>
+    const expenseCtx = document.getElementById('expensePieChart').getContext('2d');
+    const expensePieChart = new Chart(expenseCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ expense_data['expense'] | safe }},
+            datasets: [{
+                data: {{ expense_data['net_amounts'] | safe }},
+                backgroundColor: {{ colors | safe }},
+                hoverBackgroundColor: {{ colors | safe }},
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: false,
+                caretPadding: 10,
+            },
+            legend: {
+                display: false
+            },
+            cutoutPercentage: 0,
+        },
+    });
+</script>
+
+<script>
+        function validateAmount(input) {
+            const value = input.value;
+            if (!/^\d*\.?\d*$/.test(value)) {
+                input.value = value.slice(0, -1);
+            }
+        }
+</script>
+<script>
+    async function fetchExpenseData() {
+        try {
+            const response = await fetch('/expense_data');
+            const data = await response.json();
+
+            const typeSelect = document.getElementById('expenseType');
+            const subtypeSelect = document.getElementById('expenseSubtype');
+
+            // Populate expense types
+            for (const type of data.types) {
+                const option = document.createElement('option');
+                option.value = type.expense_id; // Use expense_id as value
+                option.textContent = type.expense_title; // Use expense_title as text
+                typeSelect.appendChild(option);
+            }
+
+            // Store subtypes globally with expense_id as the key
+            window.expenseSubtypes = data.subtypes;
+        } catch (error) {
+            console.error('Error fetching expense data:', error);
+        }
+    }
+
+    function populateExpenseSubtypes() {
+        const typeId = document.getElementById('expenseType').value;
+        const subtypeSelect = document.getElementById('expenseSubtype');
+        subtypeSelect.innerHTML = '';  // Clear previous subtypes
+
+        if (typeId && window.expenseSubtypes[typeId]) {
+            for (const subtype of window.expenseSubtypes[typeId]) {
+                const option = document.createElement('option');
+                option.value = subtype;
+                option.textContent = subtype;
+                subtypeSelect.appendChild(option);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchExpenseData);
+</script>
+<script>
+    async function fetchIncomeData() {
+        try {
+            const response = await fetch('/income_data');
+            const data = await response.json();
+
+            const typeSelect = document.getElementById('incomeType');
+            const subtypeSelect = document.getElementById('incomeSubtype');
+
+            // Populate income types
+            for (const type of data.types) {
+                const option = document.createElement('option');
+                option.value = type.income_id; // Use income_id as value
+                option.textContent = type.income_title; // Use income_title as text
+                typeSelect.appendChild(option);
+            }
+
+            // Store subtypes globally with income_id as the key
+            window.incomeSubtypes = {};
+            for (const subtype of data.subtypes) {
+                if (!window.incomeSubtypes[subtype.income_id]) {
+                    window.incomeSubtypes[subtype.income_id] = [];
+                }
+                window.incomeSubtypes[subtype.income_id].push(subtype.subtype_title);
+            }
+        } catch (error) {
+            console.error('Error fetching income data:', error);
+        }
+    }
+
+    function populateIncomeSubtypes() {
+        const typeId = document.getElementById('incomeType').value;
+        const subtypeSelect = document.getElementById('incomeSubtype');
+        subtypeSelect.innerHTML = '';  // Clear previous subtypes
+
+        if (typeId && window.incomeSubtypes[typeId]) {
+            for (const subtype of window.incomeSubtypes[typeId]) {
+                const option = document.createElement('option');
+                option.value = subtype;
+                option.textContent = subtype;
+                subtypeSelect.appendChild(option);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchIncomeData);
+</script>
+
+                <script>
+    $(document).ready(function() {
+        $('#incomeForm').on('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Get selected income type ID and title
+            var incomeTypeSelect = $('#incomeType');
+            var incomeTypeId = incomeTypeSelect.val();
+            var incomeTypeTitle = incomeTypeSelect.find('option:selected').text();
+
+            // Get selected income subtype ID
+            var incomeSubtypeSelect = $('#incomeSubtype');
+            var incomeSubtypeId = incomeSubtypeSelect.val();
+            var incomeSubtypeTitle = incomeSubtypeSelect.find('option:selected').text();
+
+            // Get form data
+            var formData = {
+                amount: $('#incomeAmount').val(),
+                income_type: incomeTypeTitle, // Use the title
+                income_subtype: incomeSubtypeTitle, // Use the title
+                description: $('#incomeDescription').val()
+            };
+
+            // Send data to Python function using AJAX
+            $.ajax({
+                url: '/add_income',  // URL of your Python function
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    // Handle success response
+                    alert(response.message);
+                },
+                error: function(xhr, status, error) {
+                    // Handle error response
+                    console.log('Error: ' + error);
+                    alert('An error occurred while adding income.');
+                }
+            });
+        });
+    });
+</script>
+
+
+ <script>
+    $(document).ready(function() {
+        $('#expenseForm').on('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Get selected expene type ID and title
+            var expenseTypeSelect = $('#expenseType');
+            var expenseTypeId = expenseTypeSelect.val();
+            var expenseTypeTitle = expenseTypeSelect.find('option:selected').text();
+
+            // Get selected expene subtype ID
+            var expenseSubtypeSelect = $('#expenseSubtype');
+            var expenseSubtypeId = expenseSubtypeSelect.val();
+            var expenseSubtypeTitle = expenseSubtypeSelect.find('option:selected').text();
+
+            // Get form data
+            var formData = {
+                amount: $('#expenseAmount').val(),
+                expense_type: expenseTypeTitle, // Use the title
+                expense_subtype: expenseSubtypeTitle, // Use the title
+                description: $('#expenseDescription').val()
+            };
+
+            // Send data to Python function using AJAX
+            $.ajax({
+                url: '/add_expense',  // URL of your Python function
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    // Handle success response
+                    alert(response.message);
+                },
+                error: function(xhr, status, error) {
+                    // Handle error response
+                    console.log('Error: ' + error);
+                    alert('An error occurred while adding expene.');
+                }
+            });
+        });
+    });
+</script>
+
+
+
+</body>
+
+</html>
