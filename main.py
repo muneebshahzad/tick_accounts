@@ -15,7 +15,7 @@ import aiohttp
 app = Flask(__name__)
 app.debug = True
 app.secret_key = os.getenv('APP_SECRET_KEY', 'default_secret_key')  # Use environment variable
-
+pre_loaded = 0
 order_details = []
 def get_db_connection():
     server = os.getenv('DB_SERVER')
@@ -112,7 +112,10 @@ async def process_line_item(session, line_item, fulfillments):
         return []
 
     tracking_info = []
-
+    name = 'N/A'
+    address = 'N/A'
+    phone = 'N/A'
+    city = 'N/A'
     if line_item.fulfillment_status == "fulfilled":
         for fulfillment in fulfillments:
             if fulfillment.status == "cancelled":
@@ -124,9 +127,13 @@ async def process_line_item(session, line_item, fulfillments):
                     if data['status'] == 1 and not data['error']:
                         packet_list = data['packet_list']
                         if packet_list:
+                            name = packet_list[0]['consignment_name_eng']
+                            address = packet_list[0]['consignment_address']
+                            phone = packet_list[0]['consignment_phone']
+                            city = packet_list[0]['destination_city_name']
                             tracking_details = packet_list[0].get('Tracking Detail', [])
                             if tracking_details:
-                                final_status = tracking_details[-1]['Status']
+                                final_status = packet_list[0]['booked_packet_status']
                                 keywords = ["Return", "hold", "UNTRACEABLE"]
                                 if not any(
                                         kw.lower() in final_status.lower() for kw in
@@ -154,11 +161,15 @@ async def process_line_item(session, line_item, fulfillments):
                     tracking_info.append({
                         'tracking_number': tracking_number,
                         'status': final_status,
-                        'quantity': item.quantity
+                        'quantity': item.quantity,
+                        'name':name,
+                        'address':address,
+                        'city':city,
+                        "phone":phone,
                     })
 
     return tracking_info if tracking_info else [
-        {"tracking_number": "N/A", "status": "Un-Booked", "quantity": line_item.quantity}]
+        {"tracking_number": "N/A", "status": "Un-Booked",name :'N/A' , address : 'N/A',phone :'N/A',city : 'N/A' ,"quantity": line_item.quantity}]
 
 async def process_order(session, order):
     order_start_time = time.time()
@@ -173,36 +184,36 @@ async def process_order(session, order):
         status = "Un-fulfilled"
     print(order)
     tags = []
-    try:
-        name = order.billing_address.name
-    except AttributeError:
-        name = " "
-        print("Error retrieving name")
-
-    try:
-        address = order.billing_address.address1
-    except AttributeError:
-        address = " "
-        print("Error retrieving address")
-
-    try:
-        city = order.billing_address.city
-    except AttributeError:
-        city = " "
-        print("Error retrieving city")
-
-    try:
-        phone = order.billing_address.phone
-    except AttributeError:
-        phone = " "
-        print("Error retrieving phone")
-
-    customer_details = {
-        "name": name,
-        "address": address,
-        "city": city,
-        "phone": phone
-    }
+    # try:
+    #     name = order.billing_address.name
+    # except AttributeError:
+    #     name = " "
+    #     print("Error retrieving name")
+    #
+    # try:
+    #     address = order.billing_address.address1
+    # except AttributeError:
+    #     address = " "
+    #     print("Error retrieving address")
+    #
+    # try:
+    #     city = order.billing_address.city
+    # except AttributeError:
+    #     city = " "
+    #     print("Error retrieving city")
+    #
+    # try:
+    #     phone = order.billing_address.phone
+    # except AttributeError:
+    #     phone = " "
+    #     print("Error retrieving phone")
+    #
+    # customer_details = {
+    #     "name": name,
+    #     "address": address,
+    #     "city": city,
+    #     "phone": phone
+    # }
     order_info = {
         'order_id': order.order_number,
         'tracking_id': 'N/A',
@@ -211,7 +222,7 @@ async def process_order(session, order):
         'line_items': [],
         'financial_status': (order.financial_status).title(),
         'fulfillment_status': status,
-        'customer_details' : customer_details,
+        # 'customer_details' : customer_details,
         'tags': order.tags.split(", "),
         'id': order.id
     }
@@ -251,7 +262,11 @@ async def process_order(session, order):
                 'product_title': line_item.title + " - " + variant_name ,
                 'quantity': info['quantity'],
                 'tracking_number': info['tracking_number'],
-                'status': info['status']
+                'status': info['status'],
+                'name': info.get('name', 'N/A'),
+                'address': info.get('address', 'N/A'),
+                'city': info.get('city', 'N/A'),
+                'phone': info.get('phone', 'N/A'),
             })
             order_info['status'] = info['status']
 
@@ -306,18 +321,10 @@ async def getShopifyOrders():
 
 @app.route("/track")
 def tracking():
-    global order_details
-    shop_url = os.getenv('SHOP_URL')
-    api_key = os.getenv('API_KEY')
-    password = os.getenv('PASSWORD')
-    shopify.ShopifyResource.set_site(shop_url)
-    shopify.ShopifyResource.set_user(api_key)
-    shopify.ShopifyResource.set_password(password)
-    order_details = asyncio.run(getShopifyOrders())
-    
+    global order_details,pre_loaded
     return render_template("track.html", order_details=order_details)
 
-@app.route("/track")
+@app.route("/trackx")
 def index():
     today = datetime.now().date()
 
@@ -506,9 +513,11 @@ def format_date(date_str):
 
 @app.route('/refresh', methods=['POST'])
 def refresh_data():
-    global order_details
+    global order_details,pre_loaded
     try:
+        pre_loaded = 0
         order_details = asyncio.run(getShopifyOrders())
+
         return jsonify({'message': 'Data refreshed successfully'})
     except Exception as e:
         print(f"Error refreshing data: {e}")
@@ -523,11 +532,13 @@ def check_database_connection():
     try:
         print('Connecting to the database...')
         connection = pymssql.connect(server=server, user=username, password=password, database=database)
+
         print('Connected to the database')
         return connection
     except pymssql.Error as e:
-        check_database_connection()
         print(f"Error connecting to the database: {str(e)}")
+        time.sleep(5)
+        check_database_connection()
         return None
 
 def fetch_transaction_data():
@@ -627,7 +638,7 @@ def fetch_accounts_data(connection):
     cursor = connection.cursor()
 
     try:
-        cursor.execute('SELECT accounts_name, accounts_balance FROM accounts')  # Adjust the query accordingly
+        cursor.execute('SELECT accounts_name, accounts_balance FROM accounts order by accounts_balance desc')  # Adjust the query accordingly
         accounts_data = cursor.fetchall()
 
         formatted_accounts = []
@@ -720,24 +731,35 @@ def accounts():
     connection = check_database_connection()
 
     try:
+        if not connection:
+            connection = check_database_connection()
+
         if connection:
             # Fetch account data from your database
             financial_data = fetch_monthly_financial_data(connection)
             accounts = fetch_accounts_data(connection)
             account_summary = fetch_account_summary(connection)
-            income_data= fetch_income_list(connection)
+            income_data = fetch_income_list(connection)
             expense_data = fetch_expenses(connection)
             colors = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796']
             labeled_colors = list(zip(income_data['income'], colors[:len(income_data['income'])]))
             labeled_expenses_colors = list(zip(expense_data['expense'], colors[:len(expense_data['expense'])]))
 
-            return render_template('accounts.html',labeled_colors=labeled_colors, colors=colors,accounts=accounts,account_summary=account_summary,financial_data=financial_data,income_data=income_data,expense_data=expense_data,labeled_expenses_colors=labeled_expenses_colors)
+            return render_template('accounts.html',
+                                   labeled_colors=labeled_colors,
+                                   colors=colors,
+                                   accounts=accounts,
+                                   account_summary=account_summary,
+                                   financial_data=financial_data,
+                                   income_data=income_data,
+                                   expense_data=expense_data,
+                                   labeled_expenses_colors=labeled_expenses_colors)
         else:
-            return "Error: No database connection"
+            return render_template('error.html', message="Could not connect to the database. Please try again later.")
 
     except Exception as e:
         print(f"Error in account_balances route: {str(e)}")
-        return "Error in account_balances route"
+        return render_template('error.html', message="An unexpected error occurred. Please try again later.")
 
     finally:
         if connection:
@@ -984,18 +1006,29 @@ def add_expense():
         return jsonify({'status': 'error', 'message': 'Error: No database connection'})
 
 
+async def fetch_order_details():
+    # Run the function in the background
+    global order_details
+    order_details = await getShopifyOrders()
+
+def start_background_task():
+    # Start the background task
+    loop = asyncio.get_event_loop()
+    loop.create_task(fetch_order_details())
 
 
-
+shop_url = os.getenv('SHOP_URL')
+api_key = os.getenv('API_KEY')
+password = os.getenv('PASSWORD')
+shopify.ShopifyResource.set_site(shop_url)
+shopify.ShopifyResource.set_user(api_key)
+shopify.ShopifyResource.set_password(password)
+order_details = asyncio.run(getShopifyOrders())
 
 if __name__ == "__main__":
     shop_url = os.getenv('SHOP_URL')
     api_key = os.getenv('API_KEY')
     password = os.getenv('PASSWORD')
-    shopify.ShopifyResource.set_site(shop_url)
-    shopify.ShopifyResource.set_user(api_key)
-    shopify.ShopifyResource.set_password(password)
-
     app.run(port=5001)
 
 
