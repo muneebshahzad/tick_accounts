@@ -29,42 +29,6 @@ def get_db_connection():
         print(f"Error connecting to the database: {str(e)}")
         return None
 
-@app.route("/submit_tasks", methods=["POST"])
-def submit_tasks():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    today = datetime.date.today()
-    cursor.execute("SELECT * FROM tasks WHERE Date = %s", (today,))
-    existing_tasks = cursor.fetchone()
-
-    if existing_tasks:
-        flash("Tasks have already been submitted for today.", "error")
-        return redirect(url_for("index"))
-
-    selected_tasks = {}
-    task_names = ["Confirm_Pending_Orders", "Track_Dispatched_Orders", "Contact_Abandoned_Orders", "Email_Courier",
-                  "Track_Daraz_Orders", "Solve_Customer_Complaints", "Call_Delivered_Orders", "Add_Reviews_to_Shopify",
-                  "Add_Reviews_to_Google_Maps", "Answer_Whatsapp_Messages_Calls", "Answer_Instagram_Facebook_Messages_Comments",
-                  "Answer_Daraz_Messages", "Answer_Phone_Calls"]
-
-    for task_name in task_names:
-        selected_tasks[task_name] = 1 if task_name in request.form else 0
-
-    cursor.execute("""
-        INSERT INTO tasks (Date, Confirm_Pending_Orders, Track_Dispatched_Orders, Contact_Abandoned_Orders, Email_Courier,
-        Track_Daraz_Orders, Solve_Customer_Complaints, Call_Delivered_Orders, Add_Reviews_to_Shopify,
-        Add_Reviews_to_Google_Maps, Answer_Whatsapp_Messages_Calls, Answer_Instagram_Facebook_Messages_Comments,
-        Answer_Daraz_Messages, Answer_Phone_Calls)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (today, *selected_tasks.values()))
-
-    conn.commit()
-    conn.close()
-
-    flash("Tasks submitted successfully!", "success")
-    return redirect(url_for("index"))
-
 @app.route('/send-email', methods=['POST'])
 def send_email():
     data = request.get_json()
@@ -276,7 +240,6 @@ async def process_order(session, order):
     return order_info
 
 
-
 @app.route('/apply_tag', methods=['POST'])
 def apply_tag():
     data = request.json
@@ -285,23 +248,52 @@ def apply_tag():
 
     # Get today's date in YYYY-MM-DD format
     today_date = datetime.now().strftime('%Y-%m-%d')
-    tag_with_date = f"{tag} ({today_date})"
+    tag_with_date = f"{tag.strip()} ({today_date})"
 
     try:
+        # Fetch the order
         order = shopify.Order.find(order_id)
+
+        # If the tag is "Returned", cancel the order
+        if tag.strip().lower() == "returned":
+            # Attempt to cancel the order
+            if order.cancel():
+                return jsonify({"success": True, "message": "Order canceled successfully."})
+            else:
+                return jsonify({"success": False, "error": "Failed to cancel order."})
+        if tag.strip().lower() == "delivered":
+            if order.close():
+                return jsonify({"success": True, "message": "Order closed successfully."})
+            else:
+                return jsonify({"success": False, "error": "Failed to close order."})
+
+        # Process existing tags
         if order.tags:
-            tags = order.tags.split(", ")
-            # tags = tags.remove("Leopards Courier")
+            tags = [t.strip() for t in order.tags.split(", ")]  # Remove excess spaces
         else:
             tags = []
+
+        # Remove a specific tag if needed (e.g., "Leopards Courier")
+        if "Leopards Courier" in tags:
+            tags.remove("Leopards Courier")
+
+        # Add new tag if it doesn't already exist
         if tag_with_date not in tags:
             tags.append(tag_with_date)
+
+        # Update the order with the new tags
         order.tags = ", ".join(tags)
-        order.save()
-        return jsonify({"success": True})
+
+        # Save the order
+        if order.save():
+            return jsonify({"success": True, "message": "Tag applied successfully."})
+        else:
+            return jsonify({"success": False, "error": "Failed to save order changes."})
+
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"success": False, "error": str(e)})
+
 
 async def getShopifyOrders():
 
@@ -323,89 +315,6 @@ async def getShopifyOrders():
 def tracking():
     global order_details,pre_loaded
     return render_template("track.html", order_details=order_details)
-
-@app.route("/trackx")
-def index():
-    today = datetime.now().date()
-
-    conn = get_db_connection()
-    cursor = conn.cursor(as_dict=True)
-
-    cursor.execute("SELECT * FROM tasks WHERE Date = %s", (today,))
-    tasks = cursor.fetchone()
-
-    cursor.execute("SELECT Start FROM daily_sessions WHERE Date = %s", (today,))
-    session_result = cursor.fetchone()
-
-    conn.close()
-
-    should_show_start_modal = "true" if not session_result else "false"
-    should_show_resume_modal = "false" if should_show_start_modal == "true" else "true"
-
-    start_time = session_result['Start'] if session_result else None
-
-    return render_template("index.html", tasks=tasks, today=today,
-                           should_show_start_modal=should_show_start_modal,
-                           should_show_resume_modal=should_show_resume_modal,
-                           start_time=start_time)
-
-@app.route('/start_timer', methods=['POST'])
-def start_timer():
-    today = datetime.now().date()
-    start_time = datetime.now().time()
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO daily_sessions (Date, Start) VALUES (%s, %s)", (today, start_time))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"status": "started"})
-
-@app.route('/resume_timer', methods=['POST'])
-def resume_timer():
-    today = datetime.datetime.now().date()
-    resume_time = datetime.datetime.now().time()
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT MAX(Lap_Number) FROM timer_logs WHERE Date = %s", (today,))
-    max_lap = cursor.fetchone()[0]
-    new_lap_number = max_lap + 1 if max_lap is not None else 1
-
-    cursor.execute("INSERT INTO timer_logs (Date, Lap_Number, Resume) VALUES (%s, %s, %s)",
-                   (today, new_lap_number, resume_time))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"status": "resumed"})
-
-@app.route('/get_elapsed_time', methods=['GET'])
-def get_elapsed_time():
-    today = datetime.now().date()
-
-    conn = get_db_connection()
-    cursor = conn.cursor(as_dict=True)
-    cursor.execute("SELECT Start FROM daily_sessions WHERE Date = %s", (today,))
-    session_result = cursor.fetchone()
-
-    if session_result:
-        start_time = session_result['Start']
-        start_datetime = datetime.datetime.combine(today, start_time)
-        current_datetime = datetime.datetime.now()
-
-        cursor.execute("SELECT Resume FROM timer_logs WHERE Date = %s ORDER BY Lap_Number", (today,))
-        laps = cursor.fetchall()
-        total_pause_time = sum([(current_datetime - datetime.datetime.combine(today, lap['Resume'])).total_seconds() for lap in laps])
-
-        elapsed_seconds = int((current_datetime - start_datetime).total_seconds() - total_pause_time)
-    else:
-        elapsed_seconds = 0
-
-    conn.close()
-    return jsonify({"elapsed_seconds": elapsed_seconds})
-
 
 def get_daraz_orders(statuses):
     try:
@@ -517,8 +426,7 @@ def refresh_data():
     try:
         pre_loaded = 0
         order_details = asyncio.run(getShopifyOrders())
-
-        return jsonify({'message': 'Data refreshed successfully'})
+        return render_template("track.html", order_details=order_details)
     except Exception as e:
         print(f"Error refreshing data: {e}")
         return jsonify({'message': 'Failed to refresh data'}), 500
@@ -570,7 +478,7 @@ def fetch_monthly_financial_data(connection):
     cursor = connection.cursor()
 
     try:
-        cursor.execute('SELECT Month, NetAmount FROM MonthlyFinancialSummary ORDER BY Month ASC')
+        cursor.execute("SELECT Month, NetProfit FROM MonthlySummary ORDER BY Month ASC")
         financial_data = cursor.fetchall()
 
         formatted_data = {
@@ -735,15 +643,31 @@ def accounts():
             connection = check_database_connection()
 
         if connection:
-            # Fetch account data from your database
             financial_data = fetch_monthly_financial_data(connection)
             accounts = fetch_accounts_data(connection)
             account_summary = fetch_account_summary(connection)
             income_data = fetch_income_list(connection)
             expense_data = fetch_expenses(connection)
+
+            # Debugging print statements
+            print("Financial Data:", financial_data)
+            print("Accounts:", accounts)
+            print("Account Summary:", account_summary)
+            print("Income Data:", income_data)
+            print("Expense Data:", expense_data)
+
             colors = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796']
-            labeled_colors = list(zip(income_data['income'], colors[:len(income_data['income'])]))
-            labeled_expenses_colors = list(zip(expense_data['expense'], colors[:len(expense_data['expense'])]))
+
+            # Handle empty income or expense data gracefully
+            income_list = income_data.get('income', [])
+            expense_list = expense_data.get('expense', [])
+
+            # Ensure the colors don't exceed the income/expense list lengths
+            labeled_colors = list(zip(income_list, colors[:len(income_list)])) if income_list else []
+            labeled_expenses_colors = list(zip(expense_list, colors[:len(expense_list)])) if expense_list else []
+
+            print("Labeled Colors:", labeled_colors)
+            print("Labeled Expenses Colors:", labeled_expenses_colors)
 
             return render_template('accounts.html',
                                    labeled_colors=labeled_colors,
@@ -764,6 +688,7 @@ def accounts():
     finally:
         if connection:
             connection.close()
+
 
 
 @app.route('/addTransaction')
