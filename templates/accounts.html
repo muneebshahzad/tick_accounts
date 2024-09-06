@@ -413,29 +413,28 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('monthlyNetProfitChart').getContext('2d');
-    const monthlyNetProfitChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: {{ financial_data['months'] | safe }},
-            datasets: [{
-                label: 'Net Profit',
-                data: {{ financial_data['net_amounts'] | safe }},
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
+        const ctx = document.getElementById('monthlyNetProfitChart').getContext('2d');
+        const monthlyNetProfitChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ financial_data['months'] | tojson }},
+                datasets: [{
+                    label: 'Net Profit',
+                    data: {{ financial_data['net_amounts'] | tojson }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
-        }
-    });
-</script>
-
+        });
+    </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const incomeCtx = document.getElementById('incomePieChart').getContext('2d');
@@ -608,12 +607,10 @@
 
             // Get selected income type ID and title
             var incomeTypeSelect = $('#incomeType');
-            var incomeTypeId = incomeTypeSelect.val();
             var incomeTypeTitle = incomeTypeSelect.find('option:selected').text();
 
-            // Get selected income subtype ID
+            // Get selected income subtype title
             var incomeSubtypeSelect = $('#incomeSubtype');
-            var incomeSubtypeId = incomeSubtypeSelect.val();
             var incomeSubtypeTitle = incomeSubtypeSelect.find('option:selected').text();
 
             // Get form data
@@ -632,11 +629,15 @@
                 success: function(response) {
                     // Handle success response
                     alert(response.message);
+
+                    // Clear the amount and description fields
+                    $('#incomeAmount').val('');
+                    $('#incomeDescription').val('');
                 },
                 error: function(xhr, status, error) {
                     // Handle error response
                     console.log('Error: ' + error);
-                    alert('<An12></An12> error occurred while adding income.');
+                    alert('An error occurred while adding income.');
                 }
             });
         });
@@ -649,14 +650,12 @@
         $('#expenseForm').on('submit', function(event) {
             event.preventDefault(); // Prevent the default form submission
 
-            // Get selected expene type ID and title
+            // Get selected expense type ID and title
             var expenseTypeSelect = $('#expenseType');
-            var expenseTypeId = expenseTypeSelect.val();
             var expenseTypeTitle = expenseTypeSelect.find('option:selected').text();
 
-            // Get selected expene subtype ID
+            // Get selected expense subtype title
             var expenseSubtypeSelect = $('#expenseSubtype');
-            var expenseSubtypeId = expenseSubtypeSelect.val();
             var expenseSubtypeTitle = expenseSubtypeSelect.find('option:selected').text();
 
             // Get form data
@@ -675,11 +674,15 @@
                 success: function(response) {
                     // Handle success response
                     alert(response.message);
+
+                    // Clear the amount and description fields
+                    $('#expenseAmount').val('');
+                    $('#expenseDescription').val('');
                 },
                 error: function(xhr, status, error) {
                     // Handle error response
                     console.log('Error: ' + error);
-                    alert('An error occurred while adding expene.');
+                    alert('An error occurred while adding expense.');
                 }
             });
         });

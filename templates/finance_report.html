@@ -130,6 +130,7 @@
         <tr>
             <th style="width: 30%;">Income/Expense Name </th>
             <th>Transaction Type</th>
+            <th>Detail</th>
             <th>Amount</th>
             <th>Date</th>
         </tr>
@@ -138,6 +139,7 @@
         <tr>
             <th style="width: 30%;">Income/Expense Name </th>
             <th>Transaction Type</th>
+            <th>Detail</th>
             <th>Amount</th>
             <th>Date</th>
         </tr>
@@ -147,6 +149,7 @@
             <tr>
                 <td>{{ transaction.Income_Expense_Name }}</td>
                 <td>{{ transaction.Type }}</td>
+                <td>{{ transaction.Description }}</td>
                 <td>{{ transaction.Amount }}</td>
                 <td>{{ transaction.Payment_Date }}</td>
             </tr>
@@ -241,7 +244,7 @@ $(document).ready(function() {
 
     // Re-initialize DataTable
     $('#dataTable').DataTable({
-        "order": [[3, 'desc']]  // Sort by the 'Date' column on page load
+        "order": [[4, 'desc']]  // Sort by the 'Date' column on page load
     });
      var table = $('#dataTable').DataTable();
     function updateTotals() {
@@ -252,7 +255,7 @@ $(document).ready(function() {
         var totalExpense = 0;
 
         filteredData.each(function (rowData) {
-            var amount = parseFloat(rowData[2]);  // Assuming amount is in the 3rd column (index 2)
+            var amount = parseFloat(rowData[3]);  // Assuming amount is in the 3rd column (index 2)
             var type = rowData[1];  // Assuming transaction type is in the 2nd column (index 1)
 
             if (type === 'Income') {
