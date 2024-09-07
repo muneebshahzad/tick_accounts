@@ -254,18 +254,19 @@ def apply_tag():
         # Fetch the order
         order = shopify.Order.find(order_id)
 
+
         # If the tag is "Returned", cancel the order
         if tag.strip().lower() == "returned":
             # Attempt to cancel the order
             if order.cancel():
-                return jsonify({"success": True, "message": "Order canceled successfully."})
+                print("Order Cancelled")
             else:
-                return jsonify({"success": False, "error": "Failed to cancel order."})
+                print("Order Cancellation Failed")
         if tag.strip().lower() == "delivered":
             if order.close():
-                return jsonify({"success": True, "message": "Order closed successfully."})
+                print("Order Cloed")
             else:
-                return jsonify({"success": False, "error": "Failed to close order."})
+                print("Order Closing Failed")
 
         # Process existing tags
         if order.tags:
