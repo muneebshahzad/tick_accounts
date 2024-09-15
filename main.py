@@ -299,7 +299,7 @@ def apply_tag():
 async def getShopifyOrders():
 
     global order_details
-    orders = shopify.Order.find(limit=250, order='created_at DESC')
+    orders = shopify.Order.find(limit=0,order='created_at DESC')
     order_details = []
     total_start_time = time.time()
 
@@ -423,14 +423,14 @@ def format_date(date_str):
 
 @app.route('/refresh', methods=['POST'])
 def refresh_data():
-    global order_details,pre_loaded
+    global order_details
     try:
-        pre_loaded = 0
         order_details = asyncio.run(getShopifyOrders())
         return render_template("track.html", order_details=order_details)
     except Exception as e:
         print(f"Error refreshing data: {e}")
         return jsonify({'message': 'Failed to refresh data'}), 500
+
 
 def check_database_connection():
     server = 'tickbags.database.windows.net'
@@ -937,10 +937,157 @@ async def fetch_order_details():
     global order_details
     order_details = await getShopifyOrders()
 
-def start_background_task():
-    # Start the background task
-    loop = asyncio.get_event_loop()
-    loop.create_task(fetch_order_details())
+
+@app.route('/get_payables')
+def get_payables():
+    connection = check_database_connection()
+
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            # Fetching data from payables table
+            cursor.execute("""SELECT vendor, amount, pendingsince FROM payables""")
+            rows = cursor.fetchall()  # Correctly fetch the rows from the cursor
+
+            payables_list = []
+            total_payables = 0  # Initialize total payables
+
+            for payable in rows:
+                vendor, amount, pending_since = payable
+                pending_days = (datetime.now().date() - pending_since).days
+
+                # Calculate total payables
+                total_payables += amount
+
+                # Prepare payables data to return
+                payables_list.append({
+                    'vendor': vendor,
+                    'amount': f"Rs {amount}",
+                    'pending_since': pending_since.strftime('%d %b %Y'),
+                    'pending_days': pending_days
+                })
+            print(total_payables)
+
+            # Return both the payables list and the total payables
+            return jsonify({
+                'payables': payables_list,
+                'total_payables': f"Rs {total_payables}"
+            })
+
+        except Exception as e:
+            connection.rollback()
+            print(f"Error in get_payables route: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Error in fetching payables'})
+
+        finally:
+            connection.close()
+    else:
+        return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
+
+@app.route('/mark_paid', methods=['POST'])
+def mark_paid():
+    vendor = request.args.get('vendor')
+
+    if not vendor:
+        return jsonify({'status': 'error', 'message': 'Vendor parameter is missing'})
+    print(vendor)
+    connection = check_database_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            # Use named parameters for SQL Server
+            cursor.execute("DELETE FROM payables WHERE vendor = %s", (vendor))
+
+            connection.commit()
+            return jsonify({'status': 'success', 'message': 'Payable marked as paid'})
+
+        except Exception as e:
+            connection.rollback()
+            print(f"Error in mark_paid route: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Error in marking payable as paid'})
+
+        finally:
+            connection.close()
+    else:
+        return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
+
+@app.route('/update_amount', methods=['POST'])
+def update_amount():
+    try:
+        data = request.get_json()
+        vendor = data.get('vendor')
+        new_amount = data.get('amount')
+        print(f"{vendor} : {new_amount}")
+
+        if not vendor or not new_amount:
+            return jsonify({'status': 'error', 'message': 'Vendor or amount is missing'})
+
+        connection = check_database_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+
+                # Use parameterized queries to prevent SQL injection
+                cursor.execute("UPDATE payables SET amount = %s WHERE vendor = %s", (new_amount, vendor))
+
+                connection.commit()
+                return jsonify({'status': 'success', 'message': 'Amount updated successfully'})
+
+            except Exception as e:
+                connection.rollback()
+                print(f"Error in update_amount route: {str(e)}")
+                return jsonify({'status': 'error', 'message': 'Error updating amount'})
+
+            finally:
+                connection.close()
+        else:
+            return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error: {str(e)}'})
+
+
+@app.route('/add_payable', methods=['POST'])
+def add_payable():
+    try:
+        data = request.get_json()
+        vendor = data.get('vendor')
+        amount = data.get('amount')
+        pending_since = data.get('pending_since')
+
+        if not vendor or not amount or not pending_since:
+            return jsonify({'status': 'error', 'message': 'All fields are required'})
+
+        connection = check_database_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+
+                # Insert new payable into the database
+                cursor.execute("""
+                    INSERT INTO payables (vendor, amount, pendingsince)
+                    VALUES (%s, %s, %s)
+                """, (vendor, amount, pending_since))
+
+                connection.commit()
+                return jsonify({'status': 'success', 'message': 'Payable added successfully'})
+
+            except Exception as e:
+                connection.rollback()
+                print(f"Error in add_payable route: {str(e)}")
+                return jsonify({'status': 'error', 'message': 'Error adding payable'})
+
+            finally:
+                connection.close()
+        else:
+            return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error: {str(e)}'})
 
 
 shop_url = os.getenv('SHOP_URL')
