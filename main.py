@@ -63,6 +63,40 @@ def send_email():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/resume')
+def resume():
+
+    try:
+        # SMTP server configuration
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+        smtp_user = os.getenv('SMTP_USER')  # Use environment variable for SMTP username
+        smtp_password = os.getenv('SMTP_PASSWORD')  # Use environment variable for SMTP password
+
+        # Create the message
+        msg = MIMEMultipart()
+        msg['From'] = smtp_user
+        msg['To'] = "muneeb.shahzad101@gmail.com"
+        msg['Subject'] = "Your Resume Was Seen"
+
+        # Email body
+        body = "RESUME SEEN"
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Connect to the SMTP server and send email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(smtp_user, msg['To'], msg.as_string())
+        server.quit()
+
+        print("Email sent successfully")
+    except Exception as e:
+        print(f"Email not sent. Error: {e}")
+
+    return render_template('resume.html')
+
+
 async def fetch_tracking_data(session, tracking_number):
 
     api_key = os.getenv('LEOPARD_API_KEY')
@@ -299,7 +333,7 @@ def apply_tag():
 async def getShopifyOrders():
 
     global order_details
-    orders = shopify.Order.find(order='created_at DESC')
+    orders = shopify.Order.find(limit=0,order='created_at DESC')
     order_details = []
     total_start_time = time.time()
 
