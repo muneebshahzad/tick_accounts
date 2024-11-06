@@ -17,6 +17,8 @@ app.debug = True
 app.secret_key = os.getenv('APP_SECRET_KEY', 'default_secret_key')  # Use environment variable
 pre_loaded = 0
 order_details = []
+daraz_orders = []
+
 def get_db_connection():
     server = os.getenv('DB_SERVER')
     database = os.getenv('DB_DATABASE')
@@ -28,6 +30,7 @@ def get_db_connection():
     except pymssql.Error as e:
         print(f"Error connecting to the database: {str(e)}")
         return None
+
 
 @app.route('/send-email', methods=['POST'])
 def send_email():
@@ -63,9 +66,9 @@ def send_email():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/resume')
 def resume():
-
     try:
         # SMTP server configuration
         smtp_server = 'smtp.gmail.com'
@@ -98,12 +101,12 @@ def resume():
 
 
 async def fetch_tracking_data(session, tracking_number):
-
     api_key = os.getenv('LEOPARD_API_KEY')
     api_password = os.getenv('LEOPARD_PASSWORD')
     url = f"https://merchantapi.leopardscourier.com/api/trackBookedPacket/?api_key={api_key}&api_password={api_password}&track_numbers={tracking_number}"
     async with session.get(url) as response:
         return await response.json()
+
 
 async def process_line_item(session, line_item, fulfillments):
     if line_item.fulfillment_status is None and line_item.fulfillable_quantity == 0:
@@ -160,14 +163,16 @@ async def process_line_item(session, line_item, fulfillments):
                         'tracking_number': tracking_number,
                         'status': final_status,
                         'quantity': item.quantity,
-                        'name':name,
-                        'address':address,
-                        'city':city,
-                        "phone":phone,
+                        'name': name,
+                        'address': address,
+                        'city': city,
+                        "phone": phone,
                     })
 
     return tracking_info if tracking_info else [
-        {"tracking_number": "N/A", "status": "Un-Booked",name :'N/A' , address : 'N/A',phone :'N/A',city : 'N/A' ,"quantity": line_item.quantity}]
+        {"tracking_number": "N/A", "status": "Un-Booked", name: 'N/A', address: 'N/A', phone: 'N/A', city: 'N/A',
+         "quantity": line_item.quantity}]
+
 
 async def process_order(session, order):
     order_start_time = time.time()
@@ -182,36 +187,36 @@ async def process_order(session, order):
         status = "Un-fulfilled"
     print(order)
     tags = []
-    # try:
-    #     name = order.billing_address.name
-    # except AttributeError:
-    #     name = " "
-    #     print("Error retrieving name")
-    #
-    # try:
-    #     address = order.billing_address.address1
-    # except AttributeError:
-    #     address = " "
-    #     print("Error retrieving address")
-    #
-    # try:
-    #     city = order.billing_address.city
-    # except AttributeError:
-    #     city = " "
-    #     print("Error retrieving city")
-    #
-    # try:
-    #     phone = order.billing_address.phone
-    # except AttributeError:
-    #     phone = " "
-    #     print("Error retrieving phone")
-    #
-    # customer_details = {
-    #     "name": name,
-    #     "address": address,
-    #     "city": city,
-    #     "phone": phone
-    # }
+    try:
+        name = order.billing_address.name
+    except AttributeError:
+        name = " "
+        print("Error retrieving name")
+
+    try:
+        address = order.billing_address.address1
+    except AttributeError:
+        address = " "
+        print("Error retrieving address")
+
+    try:
+        city = order.billing_address.city
+    except AttributeError:
+        city = " "
+        print("Error retrieving city")
+
+    try:
+        phone = order.billing_address.phone
+    except AttributeError:
+        phone = " "
+        print("Error retrieving phone")
+
+    customer_details = {
+        "name": name,
+        "address": address,
+        "city": city,
+        "phone": phone
+    }
     order_info = {
         'order_id': order.order_number,
         'tracking_id': 'N/A',
@@ -220,7 +225,7 @@ async def process_order(session, order):
         'line_items': [],
         'financial_status': (order.financial_status).title(),
         'fulfillment_status': status,
-        # 'customer_details' : customer_details,
+        'customer_details' : customer_details,
         'tags': order.tags.split(", "),
         'id': order.id
     }
@@ -257,7 +262,7 @@ async def process_order(session, order):
             order_info['line_items'].append({
                 'fulfillment_status': line_item.fulfillment_status,
                 'image_src': image_src,
-                'product_title': line_item.title + " - " + variant_name ,
+                'product_title': line_item.title + " - " + variant_name,
                 'quantity': info['quantity'],
                 'tracking_number': info['tracking_number'],
                 'status': info['status'],
@@ -287,7 +292,6 @@ def apply_tag():
     try:
         # Fetch the order
         order = shopify.Order.find(order_id)
-
 
         # If the tag is "Returned", cancel the order
         if tag.strip().lower() == "returned":
@@ -331,9 +335,8 @@ def apply_tag():
 
 
 async def getShopifyOrders():
-
     global order_details
-    orders = shopify.Order.find(limit=250,order='created_at DESC')
+    orders = shopify.Order.find(limit=250, order='created_at DESC')
     order_details = []
     total_start_time = time.time()
 
@@ -346,14 +349,16 @@ async def getShopifyOrders():
 
     return order_details
 
+
 @app.route("/track")
 def tracking():
-    global order_details,pre_loaded
-    return render_template("track.html", order_details=order_details)
+    global order_details, pre_loaded,daraz_orders
+    return render_template("track.html", order_details=order_details,darazOrders=daraz_orders)
+
 
 def get_daraz_orders(statuses):
     try:
-        access_token = '50000601237osiZ0F1HkTZVojWcjq6szVDmDPjxiuvoEbCSvB15ff2bc8xtn4m'
+        access_token = '50000900409xVwacwvjvh125d0230mEw0qQBfZgUhjtCUwgZCCy9Lyxkjee1yh'
         client = lazop.LazopClient('https://api.daraz.pk/rest', '501554', 'nrP3XFN7ChZL53cXyVED1yj4iGZZtlcD')
 
         all_orders = []
@@ -375,7 +380,6 @@ def get_daraz_orders(statuses):
             darazOrders = response.body.get('data', {}).get('orders', [])
 
             for order in darazOrders:
-                print(order)
                 order_id = order.get('order_id', 'Unknown')
 
                 item_request = lazop.LazopRequest('/order/items/get', 'GET')
@@ -383,13 +387,8 @@ def get_daraz_orders(statuses):
                 item_request.add_api_param('access_token', access_token)
 
                 item_response = client.execute(item_request)
-                try:
-                    items = item_response.body.get('data', [])
-                    if not items:
-                        raise ValueError("No items found in the response.")
-                except (AttributeError, ValueError) as e:
-                    print(f"Error retrieving items: {e}")
-                    items = []
+                items = item_response.body.get('data', [])
+
 
                 item_details = []
                 for item in items:
@@ -406,25 +405,24 @@ def get_daraz_orders(statuses):
                     track_status = "N/A"
                     for package in packages:
                         if package.get("tracking_number") == tracking_num:
-                            try:
-                                track_status = package.get('logistic_detail_info_list', [{}])[-1].get('title', "N/A")
-                            except (IndexError, KeyError) as e:
-                                print(f"Error processing tracking data: {e}")
-                                track_status = "N/A"
-                            print("MATCHED")
+                            track_status = package.get('logistic_detail_info_list', [{}])[-1].get('title', "N/A")
                             break
+                    product_title = f"{item.get('name', 'Unknown')} {item.get('variation', 'N/A')}"
+                    if "Color family:" in product_title:
+                        product_info, color_info = product_title.split("Color family:", 1)
+                        product_title = f"{product_info.strip()} - {color_info.strip()}"
 
                     item_detail = {
                         'item_image': item.get('product_main_image', 'N/A'),
-                        'item_title': item.get('name', 'Unknown'),
-                        'quantity': item.get('variation', 'N/A'),
+                        'item_title': product_title,
+                        'quantity': 1,
                         'tracking_number': item.get('tracking_code', 'N/A'),
                         'status': track_status
                     }
                     item_details.append(item_detail)
 
                 filtered_order = {
-                    'order_id': order.get('order_id', 'Unknown'),
+                    'order_id': f"{order.get('order_id', 'Unknown')}",
                     'customer': {
                         'name': f"{order.get('customer_first_name', 'Unknown')} {order.get('customer_last_name', 'Unknown')}",
                         'address': order.get('address_shipping', {}).get('address', 'N/A'),
@@ -434,6 +432,7 @@ def get_daraz_orders(statuses):
                     'date': format_date(order.get('created_at', 'N/A')),
                     'total_price': order.get('price', '0.00'),
                     'items_list': item_details,
+                    'tracking_id': 'N/A',
                 }
                 all_orders.append(filtered_order)
 
@@ -443,17 +442,20 @@ def get_daraz_orders(statuses):
         return []
 
 
+
 @app.route('/daraz')
 def daraz():
-    statuses = ['shipped','pending','ready_to_ship']
+    statuses = ['shipped', 'pending', 'ready_to_ship']
     darazOrders = get_daraz_orders(statuses)
     return render_template('daraz.html', darazOrders=darazOrders)
+
 
 def format_date(date_str):
     # Parse the date string
     date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S %z")
     # Format the date object to only show the date
     return date_obj.strftime("%Y-%m-%d")
+
 
 @app.route('/refresh', methods=['POST'])
 def refresh_data():
@@ -484,6 +486,7 @@ def check_database_connection():
         check_database_connection()
         return None
 
+
 def fetch_transaction_data():
     connection = check_database_connection()
     if connection is None:
@@ -501,6 +504,7 @@ def fetch_transaction_data():
         return []
     finally:
         connection.close()
+
 
 @app.route('/finance_report')
 def finance_report():
@@ -536,7 +540,8 @@ def fetch_account_summary(connection):
 
     try:
         # Fetch Cash on Hand (assuming it's stored in the 'accounts' table)
-        cursor.execute("SELECT FORMAT(accounts_balance, 'N0') as FormattedAmount   FROM accounts WHERE accounts_name='Bank'")
+        cursor.execute(
+            "SELECT FORMAT(accounts_balance, 'N0') as FormattedAmount   FROM accounts WHERE accounts_name='Bank'")
         cash_on_hand = cursor.fetchone()[0]
 
         # Fetch Earnings (Monthly)
@@ -577,11 +582,13 @@ def fetch_account_summary(connection):
     finally:
         cursor.close()
 
+
 def fetch_accounts_data(connection):
     cursor = connection.cursor()
 
     try:
-        cursor.execute('SELECT accounts_name, accounts_balance FROM accounts order by accounts_balance desc')  # Adjust the query accordingly
+        cursor.execute(
+            'SELECT accounts_name, accounts_balance FROM accounts order by accounts_balance desc')  # Adjust the query accordingly
         accounts_data = cursor.fetchall()
 
         formatted_accounts = []
@@ -611,7 +618,7 @@ def fetch_income_list(connection):
     try:
         # Execute the SQL query
         query = '''
-        
+
 SELECT TOP 5
     Income_Expense_Name,
     SUM(CAST(Amount AS FLOAT)) AS Amount
@@ -640,6 +647,8 @@ ORDER BY Amount DESC
 
     finally:
         cursor.close()
+
+
 def fetch_expenses(connection):
     cursor = connection.cursor()
     try:
@@ -653,7 +662,7 @@ WHERE Type = 'Expense'
 GROUP BY Income_Expense_Name
 ORDER BY Amount DESC;
 
-                """,)
+                """, )
 
         summary_data = cursor.fetchall()
         formatted_data = {
@@ -669,6 +678,8 @@ ORDER BY Amount DESC;
 
     finally:
         cursor.close()
+
+
 @app.route('/')
 def accounts():
     connection = check_database_connection()
@@ -725,14 +736,15 @@ def accounts():
             connection.close()
 
 
-
 @app.route('/addTransaction')
 def addTransaction():
-
     return render_template('addTransaction.html')
+
 
 def run_async(func, *args, **kwargs):
     return asyncio.run(func(*args, **kwargs))
+
+
 @app.route('/track/<tracking_num>')
 def displayTracking(tracking_num):
     print(f"Tracking Number: {tracking_num}")  # Debug line
@@ -769,6 +781,7 @@ def accountData(account_name):
 
     # Simple template rendering to verify if template works without data
     return render_template('finance_report.html', transactions=transactions)
+
 
 @app.route('/expense_data')
 def expense_data():
@@ -857,6 +870,7 @@ def income_data():
         if connection:
             connection.close()
 
+
 @app.route('/add_income', methods=['POST'])
 def add_income():
     connection = check_database_connection()
@@ -885,14 +899,12 @@ def add_income():
                     WHERE accounts_name = %s
                 """, (amount, payment_to))
 
-
             # Always update the 'Bank' account
             cursor.execute("""
                             UPDATE accounts
                             SET accounts_balance = accounts_balance + %s
                             WHERE accounts_name = 'Bank'
                         """, (amount,))
-
 
             # Commit the transaction
             connection.commit()
@@ -908,6 +920,7 @@ def add_income():
             connection.close()
     else:
         return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
 
 from flask import request, jsonify
 from datetime import datetime
@@ -936,7 +949,7 @@ def add_expense():
             """, (income_expense_name, description, amount, 'Expense', submission_datetime))
 
             # Update accounts if expense_title is 'Profit Withdrawal'
-            if expense_title == 'Profit Withdrawal' or expense_title=='Employee Salary' or expense_title=='Employee Loan':
+            if expense_title == 'Profit Withdrawal' or expense_title == 'Employee Salary' or expense_title == 'Employee Loan':
                 cursor.execute("""
                     UPDATE accounts
                     SET accounts_balance = accounts_balance + %s
@@ -1124,18 +1137,105 @@ def add_payable():
         return jsonify({'status': 'error', 'message': f'Error: {str(e)}'})
 
 
+@app.route('/pending')
+def pending_orders():
+    all_orders = []
+    pending_items_dict = {}  # Dictionary to track quantities of each unique item
+
+    global daraz_orders, order_details
+
+    # Process Daraz orders with the specified statuses
+    for daraz_order in daraz_orders:
+        if daraz_order['status'] in ['Ready To Ship', 'Pending']:
+            daraz_order_data = {
+                'order_via': 'Daraz',
+                'order_id': daraz_order['order_id'],
+                'status': daraz_order['status'],
+                'tracking_number': daraz_order['items_list'][0]['tracking_number'],
+                'date': daraz_order['date'],
+                'items_list': daraz_order['items_list']
+            }
+            all_orders.append(daraz_order_data)
+
+            for item in daraz_order['items_list']:
+                product_title = item['item_title']
+                quantity = item['quantity']
+                item_image = item['item_image']
+
+                if product_title in pending_items_dict:
+                    pending_items_dict[product_title]['quantity'] += quantity
+                else:
+                    pending_items_dict[product_title] = {
+                        'item_image': item_image,
+                        'item_title': product_title,
+                        'quantity': quantity
+                    }
+
+    # Process Shopify orders with the specified statuses
+    for shopify_order in order_details:
+        if shopify_order['status'] in ['Booked', 'Un-Booked']:
+            shopify_items_list = [
+                {
+                    'item_image': item['image_src'],
+                    'item_title': item['product_title'],
+                    'quantity': item['quantity'],
+                    'tracking_number': item['tracking_number'],
+                    'status': item['status']
+                }
+                for item in shopify_order['line_items']
+            ]
+
+            shopify_order_data = {
+                'order_via': 'Shopify',
+                'order_id': shopify_order['order_id'],
+                'status': shopify_order['status'],
+                'tracking_number': shopify_order['tracking_id'],
+                'date': shopify_order['created_at'],
+                'items_list': shopify_items_list
+            }
+            all_orders.append(shopify_order_data)
+
+            # Count quantities for each item in the Shopify order
+            for item in shopify_items_list:
+                product_title = item['item_title']
+                quantity = item['quantity']
+                item_image = item['item_image']
+
+                if product_title in pending_items_dict:
+                    pending_items_dict[product_title]['quantity'] += quantity
+                else:
+                    pending_items_dict[product_title] = {
+                        'item_image': item_image,
+                        'item_title': product_title,
+                        'quantity': quantity
+                    }
+
+    pending_items = list(pending_items_dict.values())
+
+    return render_template('pending.html', all_orders=all_orders, pending_items=pending_items)
+
+
+@app.route('/undelivered')
+def undelivered():
+    global order_details, pre_loaded, daraz_orders
+    return render_template("undelivered.html", order_details=order_details, darazOrders=daraz_orders)
+
+
 shop_url = os.getenv('SHOP_URL')
 api_key = os.getenv('API_KEY')
 password = os.getenv('PASSWORD')
 shopify.ShopifyResource.set_site(shop_url)
 shopify.ShopifyResource.set_user(api_key)
 shopify.ShopifyResource.set_password(password)
+statuses=['shipped', 'pending', 'ready_to_ship']
+daraz_orders = get_daraz_orders(statuses)
+print(daraz_orders[0])
 order_details = asyncio.run(getShopifyOrders())
+print(order_details[0])
 
 if __name__ == "__main__":
     shop_url = os.getenv('SHOP_URL')
     api_key = os.getenv('API_KEY')
     password = os.getenv('PASSWORD')
     app.run(port=5001)
-
 
