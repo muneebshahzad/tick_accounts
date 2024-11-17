@@ -1211,8 +1211,12 @@ def pending_orders():
                     }
 
     pending_items = list(pending_items_dict.values())
+    pending_items_sorted = sorted(pending_items, key=lambda x: x['quantity'], reverse=True)
 
-    return render_template('pending.html', all_orders=all_orders, pending_items=pending_items)
+    # Split the list into two halves
+    half = len(pending_items_sorted) // 2
+
+    return render_template('pending.html', all_orders=all_orders, pending_items=pending_items_sorted, half=half)
 
 
 @app.route('/undelivered')
@@ -1238,4 +1242,3 @@ if __name__ == "__main__":
     api_key = os.getenv('API_KEY')
     password = os.getenv('PASSWORD')
     app.run(port=5001)
-
