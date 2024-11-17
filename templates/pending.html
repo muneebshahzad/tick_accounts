@@ -126,34 +126,55 @@
                 <div class="container-fluid">
 
 
-                    <!-- Page Heading -->
-                    <h1 class="h3 mb-2 text-gray-800">Order Tracking</h1>
-
                     <!-- DataTales Example -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Shopify - Pending </h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Pending Orders </h6>
                         </div>
-                        <div style="display: flex; justify-content: center;">
-    <table class="table table-borderless" style="text-align: center; width: 60%;">
-        <thead>
-            <tr>
-                <th>Image</th>
-                <th style="width: 30%;">Title</th>
-                <th>Quantity</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in pending_items %}
-            <tr>
-                <td><img src="{{ item.item_image }}" width="75" height="75"></td>
-                <td>{{ item.item_title }}</td>
-                <td>{{ item.quantity }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                      <div style="display: flex; justify-content: center; gap: 20px;">
+    <div class="table-responsive" style="flex: 1;">
+        <table class="table table-bordered" width="100%" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th style="width: 30%;">Title</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in pending_items[:half] %}
+                <tr>
+                    <td><img src="{{ item.item_image }}" width="75" height="75"></td>
+                    <td>{{ item.item_title }}</td>
+                    <td>{{ item.quantity }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-responsive" style="flex: 1;">
+        <table class="table table-bordered" width="100%" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th style="width: 30%;">Title</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in pending_items[half:] %}
+                <tr>
+                    <td><img src="{{ item.item_image }}" width="75" height="75"></td>
+                    <td>{{ item.item_title }}</td>
+                    <td>{{ item.quantity }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
                         <div class="card-body">
                             <div class="table-responsive">
 
