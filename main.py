@@ -358,7 +358,7 @@ def tracking():
 
 def get_daraz_orders(statuses):
     try:
-        access_token = '50000900409xVwacwvjvh125d0230mEw0qQBfZgUhjtCUwgZCCy9Lyxkjee1yh'
+        access_token = '50000901729hwlirgSuh7gfy8oSVjGeulxhTVHgzj11dd2952QxguvzxpnGG7s'
         client = lazop.LazopClient('https://api.daraz.pk/rest', '501554', 'nrP3XFN7ChZL53cXyVED1yj4iGZZtlcD')
 
         all_orders = []
