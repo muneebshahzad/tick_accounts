@@ -79,8 +79,8 @@ def format_date(date_str):
 @app.route('/finance_report')
 def finance_report():
     transactions = fetch_transaction_data()
+    return render_template("finance_report.html", transactions=transactions, account=True)
 
-    return render_template('finance_report.html', transactions=transactions)
 
 
 def fetch_monthly_financial_data(connection):
@@ -320,7 +320,7 @@ def accountData(account_name):
         return "Database connection error", 500  # Return an error message or page if connection fails
 
     print("CONNECTED TO DATABASE")
-
+    person= account_name.title()
     try:
         with connection.cursor(as_dict=True) as cursor:
             query = "SELECT * FROM IncomeExpenseTable WHERE Income_Expense_Name LIKE %s ORDER BY Payment_Date DESC"
@@ -333,7 +333,7 @@ def accountData(account_name):
         connection.close()
 
     # Simple template rendering to verify if template works without data
-    return render_template('finance_report.html', transactions=transactions)
+    return render_template("finance_report.html", transactions=transactions, account=False,person_name=person)
 
 
 @app.route('/expense_data')
@@ -432,7 +432,7 @@ def add_income():
         try:
             cursor = connection.cursor()
 
-            amount = request.form['amount']
+            amount = float(request.form['amount'])
             income_title = request.form['income_type']
             payment_to = request.form['income_subtype']
             description = request.form.get('description', '')
@@ -440,11 +440,44 @@ def add_income():
 
             income_expense_name = f"{income_title} - {payment_to}"
 
+            # Get current bank balance from last record
             cursor.execute("""
-                INSERT INTO IncomeExpenseTable (Income_Expense_Name, Description, Amount, Type, [Payment_Date])
-                VALUES (%s, %s, %s, %s, %s)
-            """, (income_expense_name, description, amount, 'Income', submission_datetime))
+                SELECT Bank_Balance
+                FROM IncomeExpenseTable
+                ORDER BY Payment_Date DESC, ID DESC
+                LIMIT 1
+            """)
+            last_bank_balance = cursor.fetchone()
+            current_bank_balance = last_bank_balance[0] if last_bank_balance else 0.00
 
+            new_bank_balance = current_bank_balance + amount
+
+            # Optional: get current account balance (if needed for 'Account_Balance')
+            cursor.execute("""
+                SELECT accounts_balance
+                FROM accounts
+                WHERE accounts_name = %s
+            """, (payment_to,))
+            account_balance_result = cursor.fetchone()
+            current_account_balance = account_balance_result[0] if account_balance_result else 0.00
+            new_account_balance = current_account_balance + amount
+
+            # Insert with Bank_Balance and Account_Balance
+            cursor.execute("""
+                INSERT INTO IncomeExpenseTable
+                    (Income_Expense_Name, Description, Amount, Type, Payment_Date, Bank_Balance, Account_Balance)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                income_expense_name,
+                description,
+                amount,
+                'Income',
+                submission_datetime,
+                new_bank_balance,
+                new_account_balance
+            ))
+
+            # Update individual account balance if it's an investment
             if income_title == 'Investments':
                 cursor.execute("""
                     UPDATE accounts
@@ -452,16 +485,14 @@ def add_income():
                     WHERE accounts_name = %s
                 """, (amount, payment_to))
 
-            # Always update the 'Bank' account
+            # Always update Bank account balance
             cursor.execute("""
-                            UPDATE accounts
-                            SET accounts_balance = accounts_balance + %s
-                            WHERE accounts_name = 'Bank'
-                        """, (amount,))
+                UPDATE accounts
+                SET accounts_balance = accounts_balance + %s
+                WHERE accounts_name = 'Bank'
+            """, (amount,))
 
-            # Commit the transaction
             connection.commit()
-
             return jsonify({'status': 'success', 'message': 'Income successfully added!'})
 
         except Exception as e:
@@ -473,6 +504,7 @@ def add_income():
             connection.close()
     else:
         return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
 
 
 
@@ -492,30 +524,62 @@ def add_expense():
 
             income_expense_name = f"{expense_title} - {payment_to}"
 
-            # Insert into IncomeExpenseTable
+            # Get current Bank balance from accounts table
             cursor.execute("""
-                INSERT INTO IncomeExpenseTable (Income_Expense_Name, Description, Amount, Type, [Payment_Date])
-                VALUES (%s, %s, %s, %s, %s)
-            """, (income_expense_name, description, amount, 'Expense', submission_datetime))
+                SELECT accounts_balance
+                FROM accounts
+                WHERE accounts_name = 'Bank'
+            """)
+            bank_balance_result = cursor.fetchone()
+            current_bank_balance = bank_balance_result[0] if bank_balance_result else 0.00
+            new_bank_balance = current_bank_balance - amount
 
-            # Update accounts if expense_title is 'Profit Withdrawal'
-            if expense_title == 'Profit Withdrawal' or expense_title == 'Employee Salary' or expense_title == 'Employee Loan':
+            # Determine if we should subtract from the individual account
+            update_account_balance = expense_title in ['Profit Withdrawal', 'Employee Salary', 'Employee Loan']
+
+            if update_account_balance:
+                # Get current account balance
+                cursor.execute("""
+                    SELECT accounts_balance
+                    FROM accounts
+                    WHERE accounts_name = %s
+                """, (payment_to,))
+                account_balance_result = cursor.fetchone()
+                current_account_balance = account_balance_result[0] if account_balance_result else 0.00
+                new_account_balance = current_account_balance + amount
+
+                # Update the account balance
                 cursor.execute("""
                     UPDATE accounts
-                    SET accounts_balance = accounts_balance + %s
+                    SET accounts_balance = accounts_balance - %s
                     WHERE accounts_name = %s
                 """, (amount, payment_to))
+            else:
+                new_account_balance = None  # not updated/tracked for this expense type
 
-            # Always update the 'Bank' account
+            # Always update Bank account balance
             cursor.execute("""
                 UPDATE accounts
                 SET accounts_balance = accounts_balance - %s
                 WHERE accounts_name = 'Bank'
             """, (amount,))
 
-            # Commit the transaction
-            connection.commit()
+            # Insert into IncomeExpenseTable with balance fields
+            cursor.execute("""
+                INSERT INTO IncomeExpenseTable 
+                    (Income_Expense_Name, Description, Amount, Type, Payment_Date, Bank_Balance, Account_Balance)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                income_expense_name,
+                description,
+                amount,
+                'Expense',
+                submission_datetime,
+                new_bank_balance,
+                new_account_balance
+            ))
 
+            connection.commit()
             return jsonify({'status': 'success', 'message': 'Expense successfully added!'})
 
         except Exception as e:
@@ -527,6 +591,8 @@ def add_expense():
             connection.close()
     else:
         return jsonify({'status': 'error', 'message': 'Error: No database connection'})
+
+
 
 
 @app.route('/get_payables')
