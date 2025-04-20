@@ -23,7 +23,36 @@
 <!-- Custom styles for this page -->
 <link href="{{ url_for('static', filename='assets/vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
 
+<style>
+    .date-range-filter {
+        margin: 20px 0;
+        padding: 10px;
+        background-color: #f8f9fc;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+    }
 
+    .date-range-filter label {
+        margin-right: 10px;
+    }
+
+    .date-range-filter input {
+        margin-right: 10px;
+    }
+
+    #resetBtn {
+        background-color: #ff6b6b;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    #resetBtn:hover {
+        background-color: #f00;
+    }
+</style>
 </head>
 
 <body id="page-top">
@@ -110,6 +139,17 @@
                     </ul>
 
                 </nav>
+
+                <div class="date-range-filter mb-3">
+    <label for="startDate">Start Date:</label>
+    <input type="date" id="startDate">
+
+    <label for="endDate">End Date:</label>
+    <input type="date" id="endDate">
+
+    <button id="resetBtn">Reset</button>
+</div>
+
                 <!-- End of Topbar -->
 
                 <!-- Begin Page Content -->
@@ -117,6 +157,7 @@
 
                     <!-- Page Heading -->
                     <h1 class="h3 mb-2 text-gray-800">Finance Report</h1>
+                <h3>{% if not account %} Transactions for {{ person_name }} {% endif %}</h3>
 
                     <!-- DataTales Example -->
                     <div class="card shadow mb-4">
@@ -125,37 +166,76 @@
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                               <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
     <thead>
         <tr>
-            <th style="width: 30%;">Income/Expense Name </th>
-            <th>Transaction Type</th>
+            {% if account %}<th style="width: 30%;">Income/Expense Name</th>{% endif %}
+           <th>Transaction Type</th>
             <th>Detail</th>
             <th>Amount</th>
+
+            {% if account %}
+                <th>Bank Balance</th>
+            {% endif %}
+            <th>Account Balance</th>
             <th>Date</th>
         </tr>
     </thead>
     <tfoot>
         <tr>
-            <th style="width: 30%;">Income/Expense Name </th>
+            {% if account %}<th style="width: 30%;">Income/Expense Name</th>{% endif %}
             <th>Transaction Type</th>
             <th>Detail</th>
             <th>Amount</th>
+            {% if account %}
+                <th>Bank Balance</th>
+            {% endif %}
+            <th>Account Balance</th>
             <th>Date</th>
         </tr>
     </tfoot>
     <tbody>
         {% for transaction in transactions %}
             <tr>
-                <td>{{ transaction.Income_Expense_Name }}</td>
+               {% if account %} <td>{{ transaction.Income_Expense_Name }}</td>{% endif %}
                 <td>{{ transaction.Type }}</td>
                 <td>{{ transaction.Description }}</td>
                 <td>{{ transaction.Amount }}</td>
-                <td>{{ transaction.Payment_Date }}</td>
+
+                {% if account %}
+                    <td>{{ transaction.Bank_Balance }}</td>
+                {% endif %}
+                <td>{{ transaction.Account_Balance }}</td>
+                                <td>{{ transaction.Payment_Date }}</td>
             </tr>
         {% endfor %}
     </tbody>
 </table>
+
+
+                                <style>
+    .totals {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f8f9fc;
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .totals p {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #4e73df;
+        margin-bottom: 10px;
+    }
+
+    .totals span {
+        font-weight: bold;
+        color: #1cc88a;
+    }
+</style>
+
                                 <div class="totals">
     <p>Total Income: <span id="totalIncome">0.00</span></p>
     <p>Total Expense: <span id="totalExpense">0.00</span></p>
@@ -237,26 +317,41 @@
 
 <script>
 $(document).ready(function() {
-    var table = $('#dataTable').DataTable();
-     if ($.fn.DataTable.isDataTable('#dataTable')) {
-        table.destroy();
+    // Destroy existing instance if needed
+    if ($.fn.DataTable.isDataTable('#dataTable')) {
+        $('#dataTable').DataTable().destroy();
     }
 
-    // Re-initialize DataTable
-    $('#dataTable').DataTable({
-        "order": [[4, 'desc']]  // Sort by the 'Date' column on page load
+    // Map headers to column indexes
+    var headers = {};
+    $('#dataTable thead th').each(function(index) {
+        headers[$(this).text().trim()] = index;
     });
-     var table = $('#dataTable').DataTable();
-    function updateTotals() {
-        // Get filtered data
-        var filteredData = table.rows({ filter: 'applied' }).data();
 
+    var dateIndex = headers["Date"];
+
+    var table = $('#dataTable').DataTable({
+        "order": [[dateIndex, 'desc']]
+    });
+
+    // Re-map headers (based on DataTable headers)
+    headers = {};
+    table.columns().header().each(function(header, index) {
+        headers[$(header).text().trim()] = index;
+    });
+
+    var typeIndex = headers["Transaction Type"];
+    var amountIndex = headers["Amount"];
+
+    function updateTotals() {
         var totalIncome = 0;
         var totalExpense = 0;
 
+        var filteredData = table.rows({ filter: 'applied' }).data();
+
         filteredData.each(function (rowData) {
-            var amount = parseFloat(rowData[3]);  // Assuming amount is in the 3rd column (index 2)
-            var type = rowData[1];  // Assuming transaction type is in the 2nd column (index 1)
+            var type = $('<div>').html(rowData[typeIndex]).text().trim();
+            var amount = parseFloat($('<div>').html(rowData[amountIndex]).text()) || 0;
 
             if (type === 'Income') {
                 totalIncome += amount;
@@ -265,20 +360,45 @@ $(document).ready(function() {
             }
         });
 
-        // Update totals display
         $('#totalIncome').text(totalIncome.toFixed(2));
         $('#totalExpense').text(totalExpense.toFixed(2));
     }
 
-    // Update totals when table is drawn (e.g., after filtering, sorting)
+    // Custom date filter
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        var startDate = $('#startDate').val();
+        var endDate = $('#endDate').val();
+        var dateText = data[dateIndex].split(' ')[0]; // 'YYYY-MM-DD' from 'YYYY-MM-DD HH:MM:SS'
+
+        if (!startDate && !endDate) return true;
+
+        if (startDate && dateText < startDate) return false;
+        if (endDate && dateText > endDate) return false;
+
+        return true;
+    });
+
+    // Trigger redraw when dates are changed
+    $('#startDate, #endDate').on('change', function() {
+        table.draw();
+    });
+
+    // Reset button clears filters
+    $('#resetBtn').on('click', function() {
+        $('#startDate').val('');
+        $('#endDate').val('');
+        table.draw();
+    });
+
+    // Update totals after each redraw
     table.on('draw', function() {
         updateTotals();
     });
 
-    // Initial update
-    updateTotals();
+    updateTotals(); // Initial totals
 });
 </script>
+
 
 </body>
 
