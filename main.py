@@ -550,7 +550,7 @@ def add_expense():
                 # Update the account balance
                 cursor.execute("""
                     UPDATE accounts
-                    SET accounts_balance = accounts_balance - %s
+                    SET accounts_balance = accounts_balance + %s
                     WHERE accounts_name = %s
                 """, (amount, payment_to))
             else:
