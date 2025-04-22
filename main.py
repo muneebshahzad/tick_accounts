@@ -442,11 +442,10 @@ def add_income():
 
             # Get current bank balance from last record
             cursor.execute("""
-                SELECT Bank_Balance
-                FROM IncomeExpenseTable
-                ORDER BY Payment_Date DESC, ID DESC
-                LIMIT 1
-            """)
+                            SELECT accounts_balance
+                            FROM accounts
+                            WHERE accounts_name = 'Bank'
+                        """)
             last_bank_balance = cursor.fetchone()
             current_bank_balance = last_bank_balance[0] if last_bank_balance else 0.00
 
